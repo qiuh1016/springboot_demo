@@ -57,7 +57,7 @@ public class SwaggerConfig {
 //                .apiInfo(mongoApiInfo());
     }
 
-    @Bean
+/*    @Bean
     public Docket mongoApi() {
         return new Docket(DocumentationType.SWAGGER_2)
                 .groupName("mongo")
@@ -70,7 +70,7 @@ public class SwaggerConfig {
                 .paths(or(regex("/mongo/.*")))//过滤的接口
                 .build();
 //                .apiInfo(mongoApiInfo());
-    }
+    }*/
 
 
 
