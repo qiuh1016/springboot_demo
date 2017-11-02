@@ -1,13 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://www.mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
-    <typeAliases>
-        <typeAlias alias="Integer" type="java.lang.Integer" />
-        <typeAlias alias="Long" type="java.lang.Long" />
-        <typeAlias alias="HashMap" type="java.util.HashMap" />
-        <typeAlias alias="LinkedHashMap" type="java.util.LinkedHashMap" />
-        <typeAlias alias="ArrayList" type="java.util.ArrayList" />
-        <typeAlias alias="LinkedList" type="java.util.LinkedList" />
-    </typeAliases>
-    <mappers>
-        <mapper resource="mybatis/mappers/UserMapper.xml"/>
-    </mappers>
+  <!-- 引用jdbc.properties配置文件 -->
+  <properties resource="jdbc.properties"/>
+
+  <typeAliases>
+    <typeAlias type="com.cetcme.springBootDemo.domain.AcqData" alias="AcqData"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Alarm" alias="Alarm"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Circle" alias="Circle"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Command" alias="Command"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Device" alias="Device"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Fence" alias="Fence"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.IofLog" alias="IofLog"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.IofSailor" alias="IofSailor"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Polygon" alias="Polygon"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Punch" alias="Punch"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Ship" alias="Ship"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.SysConfig" alias="SysConfig"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.Dict" alias="Dict"/>
+    <typeAlias type="com.cetcme.springBootDemo.domain.User" alias="User"/>
+  </typeAliases>
+  <environments default="development">
+    <environment id="development">
+      <transactionManager type="JDBC"/>
+      <dataSource type="com.cetcme.springBootDemo.mybatis.plugin.DruidDataSourceFactory">
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.user}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <!-- 配置初始化大小、最小、最大 -->
+        <property name="initialSize" value="1"/>
+        <property name="minIdle" value="1"/>
+        <property name="maxActive" value="1024"/>
+
+        <!-- 配置获取连接等待超时的时间 -->
+        <property name="maxWait" value="60000"/>
+
+        <!-- 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+        <property name="timeBetweenEvictionRunsMillis" value="60000"/>
+
+        <!-- 配置一个连接在池中最小生存的时间，单位是毫秒 -->
+        <property name="minEvictableIdleTimeMillis" value="300000"/>
+
+        <property name="validationQuery" value="SELECT 'x'"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnBorrow" value="false"/>
+        <property name="testOnReturn" value="false"/>
+
+        <!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+        <property name="poolPreparedStatements" value="true"/>
+        <property name="maxPoolPreparedStatementPerConnectionSize" value="20"/>
+
+        <!-- 配置监控统计拦截的filters -->
+        <property name="filters" value="stat"/>
+      </dataSource>
+    </environment>
+  </environments>
+  <mappers>
+    <mapper resource="mybatis/mappers/AcqDataMapper.xml"/>
+    <mapper resource="mybatis/mappers/AlarmMapper.xml"/>
+    <mapper resource="mybatis/mappers/CircleMapper.xml"/>
+    <mapper resource="mybatis/mappers/CommandMapper.xml"/>
+    <mapper resource="mybatis/mappers/DeviceMapper.xml"/>
+    <mapper resource="mybatis/mappers/FenceMapper.xml"/>
+    <mapper resource="mybatis/mappers/IofLogMapper.xml"/>
+    <mapper resource="mybatis/mappers/IofSailorMapper.xml"/>
+    <mapper resource="mybatis/mappers/PolygonMapper.xml"/>
+    <mapper resource="mybatis/mappers/PunchMapper.xml"/>
+    <mapper resource="mybatis/mappers/ShipMapper.xml"/>
+    <mapper resource="mybatis/mappers/SysConfigMapper.xml"/>
+    <mapper resource="mybatis/mappers/DictMapper.xml"/>
+    <mapper resource="mybatis/mappers/UserMapper.xml"/>
+  </mappers>
 </configuration>

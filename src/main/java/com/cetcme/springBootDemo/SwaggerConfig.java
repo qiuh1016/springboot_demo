@@ -41,20 +41,6 @@ public class SwaggerConfig {
      * （访问页面就可以看到效果了）
      *
      */
-    @Bean
-    public Docket mongoApi() {
-        return new Docket(DocumentationType.SWAGGER_2)
-                .groupName("mongo")
-                .genericModelSubstitutes(DeferredResult.class)
-//                .genericModelSubstitutes(ResponseEntity.class)
-                .useDefaultResponseMessages(false)
-                .forCodeGeneration(true)
-                .pathMapping("/")// base，最终调用接口后会和paths拼接在一起
-                .select()
-                .paths(or(regex("/mongo/.*")))//过滤的接口
-                .build();
-//                .apiInfo(mongoApiInfo());
-    }
 
     @Bean
     public Docket mysqlApi() {
@@ -70,6 +56,23 @@ public class SwaggerConfig {
                 .build();
 //                .apiInfo(mongoApiInfo());
     }
+
+    @Bean
+    public Docket mongoApi() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .groupName("mongo")
+                .genericModelSubstitutes(DeferredResult.class)
+//                .genericModelSubstitutes(ResponseEntity.class)
+                .useDefaultResponseMessages(false)
+                .forCodeGeneration(true)
+                .pathMapping("/")// base，最终调用接口后会和paths拼接在一起
+                .select()
+                .paths(or(regex("/mongo/.*")))//过滤的接口
+                .build();
+//                .apiInfo(mongoApiInfo());
+    }
+
+
 
     private ApiInfo mongoApiInfo() {
         return new ApiInfoBuilder()
