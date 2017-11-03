@@ -43,6 +43,21 @@ public class SwaggerConfig {
      */
 
     @Bean
+    public Docket mainApi() {
+        return new Docket(DocumentationType.SWAGGER_2)
+                .groupName("main")
+                .genericModelSubstitutes(DeferredResult.class)
+//                .genericModelSubstitutes(ResponseEntity.class)
+                .useDefaultResponseMessages(false)
+                .forCodeGeneration(true)
+                .pathMapping("/")// base，最终调用接口后会和paths拼接在一起
+                .select()
+                .paths(or(regex("/.*")))//过滤的接口
+                .build();
+//                .apiInfo(mongoApiInfo());
+    }
+
+    @Bean
     public Docket mysqlApi() {
         return new Docket(DocumentationType.SWAGGER_2)
                 .groupName("mysql")

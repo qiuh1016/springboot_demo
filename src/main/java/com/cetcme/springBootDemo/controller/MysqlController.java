@@ -1,20 +1,17 @@
 package com.cetcme.springBootDemo.controller;
+
 import com.cetcme.springBootDemo.dao.AcqDataDao;
 import com.cetcme.springBootDemo.dao.FenceDao;
 import com.cetcme.springBootDemo.dao.ShipDao;
 import com.cetcme.springBootDemo.domain.AcqData;
 import com.cetcme.springBootDemo.domain.FenceExtend;
 import com.cetcme.springBootDemo.domain.Ship;
+import com.cetcme.springBootDemo.task.RefreshCacheTask;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PathVariable;
-
-import java.util.List;
-
+import org.springframework.web.bind.annotation.*;
 
 /**
  * Created by qiuhong on 01/11/2017.
@@ -23,18 +20,33 @@ import java.util.List;
 @RequestMapping("/mysql")
 public class MysqlController {
 
-
     public static Logger logger = LoggerFactory.getLogger(MysqlController.class);
-//
+
     @RequestMapping(value = "/get", method = RequestMethod.GET)
-    public String get(Long id) {
+    @ApiOperation(nickname = "get", value = "get", notes = "根据ID获取渔船")
+    public String get(@ApiParam(value = "渔船ID") @RequestParam Long id) {
         ShipDao dao = new ShipDao();
         Ship ship = dao.getByShipId(id);
         if (ship == null) {
             return "null";
         }
-
         return ship.toString();
+    }
+
+    private RefreshCacheTask refreshCacheTask = new RefreshCacheTask();
+
+    @RequestMapping(value = "/timer", method = RequestMethod.GET)
+    @ApiOperation(nickname = "get", value = "get", notes = "开启任务")
+    public String timer() {
+        refreshCacheTask.start();
+        return "OK";
+    }
+
+    @RequestMapping(value = "/stop", method = RequestMethod.GET)
+    @ApiOperation(nickname = "get", value = "get", notes = "结束任务")
+    public String stopTimer() {
+        refreshCacheTask.stop();
+        return "OK";
     }
 
 //    @RequestMapping(value = "/getUser", method = RequestMethod.GET)

@@ -25,7 +25,7 @@
 	</properties>
 
 	<dependencies>
-		<!--spring_boot-->
+		<!-- spring_boot -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
@@ -37,18 +37,19 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!--spring_boot end-->
+		<!-- spring_boot end -->
 
+		<!-- db -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-mongodb</artifactId>
 		</dependency>
 
-		<!--<dependency>-->
-			<!--<groupId>org.mybatis.spring.boot</groupId>-->
-			<!--<artifactId>mybatis-spring-boot-starter</artifactId>-->
-			<!--<version>1.1.1</version>-->
-		<!--</dependency>-->
+		<dependency>
+			<groupId>org.redisson</groupId>
+			<artifactId>redisson</artifactId>
+			<version>3.5.4</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.mybatis</groupId>
@@ -60,12 +61,7 @@
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 		</dependency>
-
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.17</version>
-		</dependency>
+		<!-- db end -->
 
 		<!-- Swagger -->
 		<dependency>
@@ -80,6 +76,13 @@
 			<version>2.6.1</version>
 		</dependency>
 		<!-- Swagger end -->
+
+	 	<!-- old project -->
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -129,6 +132,8 @@
 			<!--<artifactId>mongodb-driver</artifactId>-->
 			<!--<version>3.3.0</version>-->
 		<!--</dependency>-->
+
+		<!-- old project end -->
 	</dependencies>
 
 	<build>
