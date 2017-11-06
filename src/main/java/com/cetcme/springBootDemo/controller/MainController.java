@@ -1,5 +1,6 @@
 package com.cetcme.springBootDemo.controller;
 
+import com.cetcme.springBootDemo.domain.DeviceExtend;
 import com.cetcme.springBootDemo.message.RealTimeMsg;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
 import io.swagger.annotations.ApiOperation;
@@ -26,7 +27,9 @@ public class MainController {
     }
 
     @RequestMapping(value = "/getRedis", method = RequestMethod.GET)
-    public Object getRedis(String shipNo) {
-        return redissonUtil.getDeviceList(shipNo).get("cfsEndDate");
+    public DeviceExtend getRedis(String deviceNo) {
+        return redissonUtil.getDeviceInfo(deviceNo);
     }
+
+
 }

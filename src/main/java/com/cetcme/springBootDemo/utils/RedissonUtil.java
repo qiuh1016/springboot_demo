@@ -1,13 +1,14 @@
 package com.cetcme.springBootDemo.utils;
 
-import com.cetcme.springBootDemo.domain.AcqData;
-import com.cetcme.springBootDemo.domain.DeviceExtend;
+import com.cetcme.springBootDemo.domain.*;
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -38,58 +39,286 @@ public class RedissonUtil {
 
 
     /**
-     * 设置设备信息列表
+     * 从数据库读入实时采集数据(对新上传的数据而言，就是上一条数据)
      * @param prevAcqData
      * @return
      */
-    public String setPrevAcqData(List<AcqData> prevAcqData) {
-        List<AcqData> list = redisson.getList(RedisKey.PREV_ACQDATA_CACHE.toString());
-        list.clear();
-        list.addAll(prevAcqData);
-        return "OK";
+    public void loadPrevAcqData(List<AcqData> prevAcqData) {
+        Map<String, Object> map = redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString());
+        map.clear();
+        for (AcqData d: prevAcqData) {
+            map.put(d.getDeviceNo(), d);
+        }
     }
     public List<AcqData> getPrevAcqData() {
         return redisson.getList(RedisKey.PREV_ACQDATA_CACHE.toString());
     }
-
 
     /**
      * 设置设备信息列表
      * @param deviceExtendList
      * @return
      */
-    public String setDeviceList(List<DeviceExtend> deviceExtendList) {
+    public void loadDeviceInfo(List<DeviceExtend> deviceExtendList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString());
+        map.clear();
         for (DeviceExtend d: deviceExtendList) {
-//            logger.info(d.getPicName());
+            map.put(d.getDeviceNo(), d);
+        }
+    }
 
-            Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_INFO_CACHE + "_" + d.getDeviceId());
-            if (d.getCfsEndDate()       != null) map.put("cfsEndDate"    , d.getCfsEndDate());
-            if (d.getCfsStartDate()     != null) map.put("cfsStartDate"  , d.getCfsStartDate());
-            if (d.getDeviceId()         != null) map.put("deviceId"      , d.getDeviceId());
-            if (d.getDeviceNo()         != null) map.put("deviceNo"      , d.getDeviceNo());
-            if (d.getIdcardreaderNo()   != null) map.put("idcardreaderNo", d.getIdcardreaderNo());
-            if (d.getOfflineFlag()      != null) map.put("offlineFlag"   , d.getOfflineFlag());
-            if (d.getOuttimeFlag()      != null) map.put("outtimeFlag"   , d.getOuttimeFlag());
-            if (d.getPairFlag()         != null) map.put("pairFlag"      , d.getPairFlag());
-            if (d.getPicName()          != null) map.put("picName"       , d.getPicName());
-            if (d.getPicTelNo()         != null) map.put("picTelNo"      , d.getPicTelNo());
-            if (d.getShipId()           != null) map.put("shipId"        , d.getShipId());
-            if (d.getShipNo()           != null) map.put("shipNo"        , d.getShipNo());
+    public DeviceExtend getDeviceInfo(String deviceNo) {
+        Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString());
+        DeviceExtend deviceExtend = (DeviceExtend) map.get(deviceNo);
+        return deviceExtend;
+    }
+
+    public void loadSysConfig(List<SysConfig> sysConfigs) {
+        Map<String, Object> map = redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString());
+        map.clear();
+        for (SysConfig sysConfig : sysConfigs) {
+            // 时间单位全部转为毫秒
+            String key = sysConfig.getParamCode();
+
+            String originValue = sysConfig.getParamValue();
+
+            String unit = sysConfig.getUnit();
+            Constants.DateUnitType unitType = Constants.DateUnitType.getEnumByValue(unit);
+            // 如果是时间单位，统一转化为毫秒 毫秒都是整数 所以强制转为整数
+            if (unitType != null) {
+                Double doubleValue = DateUtil.convertToMiliSecond(unitType, originValue);
+                map.put(key, doubleValue.longValue());
+                continue;
+            }
+
+            if (CommonUtil.isInteger(originValue)) {
+                Integer intValue = Integer.valueOf(originValue);
+                map.put(key, intValue);
+                continue;
+            }
+
+            if (CommonUtil.isDouble(originValue)) {
+                Double doubleValue = Double.valueOf(originValue);
+                map.put(key, doubleValue);
+                continue;
+            }
+            map.put(key, originValue);
+        }
+    }
+
+    public void loadDict(List<Dict> dictList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.DICT_CACHE.toString());
+        map.clear();
+        for (Dict dict : dictList) {
+            String key = String.format("%s,%s", dict.getDictType(), dict.getDictCode());
+            map.put(key, dict);
+        }
+    }
+
+    public void loadWaitToSendCommands(List<Command> waitToSendCommandList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.WAIT_TO_SEND_COMMAND_CACHE.toString());
+        map.clear();
+
+        String prevKey = "";
+        List<Command> commandList = null;
+
+        for (Command command : waitToSendCommandList) {
+            String curKey = command.getDeviceNo();
+            String value = command.getCommandContent();
+            if (StringUtils.isBlank(value)) {
+                continue;
+            }
+
+            if (commandList == null) {
+                commandList = new ArrayList<Command>();
+                commandList.add(command);
+                prevKey = curKey;
+                continue;
+            }
+
+            if (StringUtils.equals(prevKey, curKey)) {
+                commandList.add(command);
+                continue;
+            }
+
+            map.put(prevKey, commandList);
+            commandList = new ArrayList<Command>();
+            commandList.add(command);
+            prevKey = curKey;
+        }
+        if (commandList != null) {
+            map.put(prevKey, commandList);
+        }
+    }
+
+    /**
+     * 从数据库中读入港口信息
+     */
+    public void loadFenceInfo(List<FenceExtend> fenceList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString());
+        map.clear();
+
+        List<CircleFence> circleFenceList = new ArrayList<CircleFence>();
+        List<PolygonFence> polygonFenceList = new ArrayList<PolygonFence>();
+
+        for (int i = 0; i < fenceList.size(); i++) {
+            FenceExtend fenceExtend = fenceList.get(i);
+            switch (Constants.FenceType.getEnumByValue(fenceExtend.getFenceType())) {
+                case CIRCLE:
+                    // 如果是圆形围栏，则只取一条，且取半径
+                    if (fenceExtend.getLongitude() == null || fenceExtend.getLatitude() == null
+                            || fenceExtend.getRadius() == null || fenceExtend.getRadius() == 0) {
+                        continue;
+                    }
+                    CircleFence circleFence = new CircleFence();
+                    circleFence.setLongitude(fenceExtend.getLongitude());
+                    circleFence.setLatitude(fenceExtend.getLatitude());
+                    circleFence.setRadius(fenceExtend.getRadius());
+                    circleFence.setFenceId(fenceExtend.getFenceId());
+                    circleFenceList.add(circleFence);
+                    break;
+                case RECTANG:
+                case POLYGON:
+                    // 如果是多方形围栏(包括正方形围栏)，则把该围栏所有的点保存到一条记录中
+                    Long curFenceId = fenceExtend.getFenceId();
+                    List<GpsPosition> vertices = new ArrayList<GpsPosition>();
+                    int j = i;
+                    for (; j < fenceList.size(); j++) {
+                        FenceExtend tempFenceExtend = fenceList.get(j);
+                        // 如果不相等，则退出
+                        if (!curFenceId.equals(tempFenceExtend.getFenceId())) {
+                            break;
+                        }
+                        Double lon = tempFenceExtend.getLongitude();
+                        Double lat = tempFenceExtend.getLatitude();
+                        if (lon == null || lat == null) {
+                            continue;
+                        }
+                        vertices.add(new GpsPosition(lon, lat));
+                    }
+                    if (vertices.size() > 0) {
+                        PolygonFence polygonFence = new PolygonFence();
+                        polygonFence.setFenceId(curFenceId);
+                        polygonFence.setVertices(vertices);
+                        polygonFenceList.add(polygonFence);
+                    }
+
+                    i = j - 1;
+                    break;
+                default:
+                    break;
+            }
         }
 
-//        List<DeviceExtend> list = redisson.getList(RedisKey.DEVICE_INFO_CACHE.toString());
-//        list.clear();
-//        list.addAll(deviceExtendList);
-        return "OK";
+        map.put(Constants.CIRCLE_FENCE, circleFenceList);
+        map.put(Constants.POLYGON_FENCE, polygonFenceList);
     }
-    public Map<String, Object> getDeviceList(String ShipNo) {
-        return redisson.getMap(RedisKey.DEVICE_INFO_CACHE + "_" + ShipNo);
+
+    /**
+     * 从数据库中读入历史数据表索引 信息
+     */
+    public void loadAcqDataHistoryTblIndex(List<AcqTblIndex> acqTblIndexList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.ACQDATA_HISTORY_TBL_INDEX_CACHE.toString());
+        map.clear();
+        for (AcqTblIndex acqTblIndex : acqTblIndexList) {
+            String key = acqTblIndex.getDeviceNo();
+            String value = acqTblIndex.getTableSuff();
+            if (value != null) {
+                map.put(key, value);
+            }
+        }
+    }
+
+    /**
+     * 从数据库中读入嘉科信息报警权限信息
+     */
+    public void loadJkxxAlarmPerm(List<Integer> alarmPermList) {
+        Map<String, Object> map = redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString());
+        map.clear();
+        map.put(Constants.JKXX_USER_NAME, alarmPermList);
+    }
+
+    /**
+     * 获取所有设备权限用户Id
+     */
+    public void loadDeviceRuleUserId(Map<String, String> ruleMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_RULE_USERID.toString());
+        map.clear();
+        for(String key : ruleMap.keySet()){
+            map.put(key, ruleMap.get(key)+"");
+        }
+    }
+
+    /**
+     * 获取所有围栏坐标
+     */
+    public void loadCordonList(Map<String, List<GpsPosition>> cordonMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.CORDON_GIS_LIST.toString());
+        map.clear();
+        for(String key : cordonMap.keySet()){
+            map.put(key, cordonMap.get(key));
+        }
+    }
+
+    /**
+     * 获取围栏与用户_围栏报警类型的关系
+     */
+    public void loadCordonUser(Map<String, String> cordonMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.CORDON_USERID.toString());
+        map.clear();
+        for(String key : cordonMap.keySet()){
+            map.put(key, cordonMap.get(key)+"");
+        }
+    }
+
+    /**
+     * 获取围栏与设备的关系
+     */
+    public void loadCordonDevice(Map<String, String> cordonMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.CORDON_USERID.toString());
+        map.clear();
+        for(String key : cordonMap.keySet()){
+            map.put(key, cordonMap.get(key)+"");
+        }
+    }
+
+    /**
+     * 获取进出围栏报警未解除部分
+     */
+    public void loadAlarmInCordon(Map<String, String> cordonInMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.CORDON_STATE_IN.toString());
+        map.clear();
+        for(String key : cordonInMap.keySet()){
+            map.put(key, cordonInMap.get(key) + "");
+        }
+    }
+
+    /**
+     * 获取进出围栏报警未解除部分
+     */
+    public void loadAlarmOutCordon(Map<String, String> cordonOutMap) {
+        Map<String, Object> map = redisson.getMap(RedisKey.CORDON_STATE_IN.toString());
+        map.clear();
+        for(String key : cordonOutMap.keySet()){
+            map.put(key, cordonOutMap.get(key) + "");
+        }
     }
 
     public enum RedisKey {
         DEVICE_INFO_CACHE("DEVICE_INFO_CACHE"),
-        PREV_ACQDATA_CACHE("PREV_ACQDATA_CACHE");
-
+        SYS_CONFIG_CACHE("SYS_CONFIG_CACHE"),
+        DICT_CACHE("DICT_CACHE"),
+        PREV_ACQDATA_CACHE("PREV_ACQDATA_CACHE"),
+        WAIT_TO_SEND_COMMAND_CACHE("WAIT_TO_SEND_COMMAND_CACHE"),
+        FENCE_INFO_CACHE("FENCE_INFO_CACHE"),
+        ACQDATA_HISTORY_TBL_INDEX_CACHE("ACQDATA_HISTORY_TBL_INDEX_CACHE"),
+        ALARM_PERM_CACHE("ALARM_PERM_CACHE"),
+        DEVICE_RULE_USERID("DEVICE_RULE_USERID"),
+        CORDON_GIS_LIST("CORDON_GIS_LIST"),
+        CORDON_USERID("CORDON_USERID"),
+        CORDON_DEVICE_LIST("CORDON_DEVICE_LIST"),
+        CORDON_STATE_IN("CORDON_STATE_IN"),
+        CORDON_STATE_OUT("CORDON_STATE_OUT");
         private final String value;
 
         @Override

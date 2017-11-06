@@ -1,6 +1,7 @@
 package com.cetcme.springBootDemo;
 
 import com.cetcme.springBootDemo.service.CacheService;
+import com.cetcme.springBootDemo.task.RefreshCacheTask;
 import com.cetcme.springBootDemo.utils.CacheUtil;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
 import org.redisson.api.RKeys;
@@ -20,5 +21,7 @@ public class App {
 
         CacheService cacheService = new CacheService();
         cacheService.loadCache();
+
+        new RefreshCacheTask().start();
 	}
 }
