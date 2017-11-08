@@ -22,8 +22,6 @@ public class CacheService {
 
     public static Logger logger = LoggerFactory.getLogger(CacheService.class);
     public static int loadCount = 0;
-    public static boolean printReadLog = true;
-
 
     public void loadCache() {
 //        redissonUtil.removeAll();

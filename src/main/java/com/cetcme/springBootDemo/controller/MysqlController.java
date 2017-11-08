@@ -32,42 +32,4 @@ public class MysqlController {
         }
         return ship.toString();
     }
-
-    private RefreshCacheTask refreshCacheTask = new RefreshCacheTask();
-
-    @RequestMapping(value = "/timer", method = RequestMethod.GET)
-    @ApiOperation(nickname = "get", value = "get", notes = "开启任务")
-    public String timer() {
-        refreshCacheTask.start();
-        return "OK";
-    }
-
-    @RequestMapping(value = "/stop", method = RequestMethod.GET)
-    @ApiOperation(nickname = "get", value = "get", notes = "结束任务")
-    public String stopTimer() {
-        refreshCacheTask.stop();
-        return "OK";
-    }
-
-//    @RequestMapping(value = "/getUser", method = RequestMethod.GET)
-//    public UserEntity getUser(Long id) {
-//        return userMapper.getOne(id);
-//    }
-//
-//    @RequestMapping(value = "/add", method = RequestMethod.GET)
-//    public String add(String userName, String pwd) {
-//        UserEntity user = new UserEntity(userName, pwd, UserSexEnum.MAN);
-//        userMapper.insert(user);
-//        return "add";
-//    }
-//
-//    @RequestMapping(value="update", method = RequestMethod.GET)
-//    public void update(UserEntity user) {
-//        userMapper.update(user);
-//    }
-//
-//    @RequestMapping(value="/delete/{id}", method = RequestMethod.GET)
-//    public void delete(@PathVariable("id") Long id) {
-//        userMapper.delete(id);
-//    }
 }
