@@ -19,7 +19,7 @@ public class RedissonUtil {
 
     public static Logger logger = LoggerFactory.getLogger(RedissonUtil.class);
 
-    RedissonClient redisson;
+    public static RedissonClient redisson;
 
     public RedissonUtil() {
         Config config = new Config();

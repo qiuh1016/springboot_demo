@@ -38,7 +38,7 @@ public class LocalCacheUtil {
 		}
 	}
 
-	public static void addWaitToSendCommand(Command command) {
+/*	public static void addWaitToSendCommand(Command command) {
 		synchronized (waitToSendCommandList) {
 			waitToSendCommandList.add(command);
 		}
@@ -48,7 +48,7 @@ public class LocalCacheUtil {
 		synchronized (waitToSendCommandList) {
 			waitToSendCommandList.remove(command);
 		}
-	}
+	}*/
 
 	public static void clearAlarmList() {
 		synchronized (alarmList) {

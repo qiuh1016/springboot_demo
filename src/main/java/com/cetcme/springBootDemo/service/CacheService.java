@@ -44,18 +44,18 @@ public class CacheService {
 
     public void reloadCache() {
         //半小时更新一次
-        if(loadCount % 15 == 0){
+        if (loadCount % 15 == 0){
             loadDeviceRuleUserId();
             loadSysConfig();
         }
         //一小时更新一次
-        if(loadCount % 30 == 0){
+        if (loadCount % 30 == 0){
             loadDict();
         }
         loadDeviceInfo();
         loadWaitToSendCommands();
         //20分钟更新一次
-        if(loadCount % 10 == 0){
+        if (loadCount % 10 == 0){
             loadCordonUser();
             loadCordonList();
             loadCordonDevice();
@@ -63,10 +63,10 @@ public class CacheService {
         }
         loadAcqDataHistoryTblIndex();
         //一小时更新一次
-        if(loadCount % 30 == 0){
+        if (loadCount % 30 == 0){
             loadJkxxAlarmPerm();
         }
-        if(loadCount == 30){
+        if (loadCount == 30){
             loadCount = 0;
         }
         loadCount++;

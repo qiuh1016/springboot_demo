@@ -1,8 +1,6 @@
 package com.cetcme.springBootDemo.controller;
 
 import com.cetcme.springBootDemo.domain.DeviceExtend;
-import com.cetcme.springBootDemo.message.RealTimeMsg;
-import com.cetcme.springBootDemo.utils.RedissonUtil;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import org.slf4j.Logger;
@@ -23,13 +21,12 @@ public class MainController {
     @RequestMapping(value = "/get", method = RequestMethod.GET)
     @ApiOperation(nickname = "get", value = "get", notes = "根据ID获取渔船")
     public String get(@ApiParam(value = "渔船ID") @RequestParam Long id) {
-        return RealTimeMsg.processSingleFrame(id);
+        return "OK";
     }
 
     @RequestMapping(value = "/getRedis", method = RequestMethod.GET)
     public DeviceExtend getRedis(String deviceNo) {
         return redissonUtil.getDeviceInfo(deviceNo);
     }
-
 
 }
