@@ -40,12 +40,9 @@ public class RealTimeMsgProcessor {
             readMessageCount++;
             myDeviceNo = deviceNo;
 
-//            CacheUtil.put(CacheType.IP_ADDRESS_CACHE,
-//                    ((InetSocketAddress) message.getCtx().channel().remoteAddress()).getAddress().getHostAddress(),
-//                    deviceNo);
             DeviceExtend deviceExtend = (DeviceExtend) RedissonUtil.redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
 
-            // 如 果设备编码未设置或者已删除，则直接向设备发送OK信号，丢弃数据
+            // 如果设备编码未设置或者已删除，则直接向设备发送OK信号，丢弃数据
             if (deviceExtend == null) {
                 logger.warn("{} 【{}】设备主要状态信息无效，该设备数据库中不存在或已删除！", DateUtil.parseDateToString(new Date()), deviceNo);
 

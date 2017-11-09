@@ -382,4 +382,17 @@ public class ConvertUtil {
 		buff.append("]");
 		return buff.toString();
 	}
+
+	public static byte[] stringToBytes(String txt) throws Exception{
+		byte[] data=null;
+
+		String[] strings=txt.split(" ");
+		data=new byte[strings.length];
+		for(int i=0;i<strings.length;i++){
+			int v=Integer.parseInt(strings[i],16);
+			data[i]=(byte)v;
+		}
+
+		return data;
+	}
 }

@@ -25,8 +25,11 @@ public class RedissonUtil {
         Config config = new Config();
         config
             .useSingleServer()
-            .setAddress("redis://localhost:6379")
+            .setAddress("redis://192.168.1.86:6379")
+            .setConnectionMinimumIdleSize(1)
+            .setConnectionPoolSize(8)
             .setDatabase(0);
+
         redisson = Redisson.create(config);
     }
 

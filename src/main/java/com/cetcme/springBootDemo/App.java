@@ -1,18 +1,18 @@
 package com.cetcme.springBootDemo;
 
 import com.cetcme.springBootDemo.message.DeviceStatusProcessor;
+import com.cetcme.springBootDemo.netty.TcpClient;
+import com.cetcme.springBootDemo.netty.TcpClientHandler;
 import com.cetcme.springBootDemo.service.CacheService;
 import com.cetcme.springBootDemo.task.DataInsertTask;
 import com.cetcme.springBootDemo.task.RefreshCacheTask;
-import com.cetcme.springBootDemo.utils.CacheUtil;
+import com.cetcme.springBootDemo.task.TcpSendTask;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
-import org.redisson.api.RKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,21 +24,19 @@ public class App {
 	public static RedissonUtil redissonUtil = new RedissonUtil();
 	private static CacheService  cacheService;
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 
 		cacheService = new CacheService();
 		cacheService.loadCache();
 
 		otherTask();
+//		connectTcp();
 
 		SpringApplication.run(App.class, args);
-
 	}
 
-	public static void otherTask() {
+	private static void otherTask() {
 		// 线程池
-		@SuppressWarnings("unused")
-		ExecutorService cachedThreadPool = Executors.newCachedThreadPool();
 		int cnt = Runtime.getRuntime().availableProcessors();
 		ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(cnt + 1);
 
@@ -52,5 +50,17 @@ public class App {
 		scheduledThreadPool.scheduleAtFixedRate(new RefreshCacheTask(), 100, 120, TimeUnit.SECONDS);
 
 		new DeviceStatusProcessor(1);
+	}
+
+	private static void connectTcp() throws Exception {
+		String host = "61.164.208.174";
+		int port = 3345;
+		new TcpClient().connect(host, port);
+
+		TcpSendTask tcpSendTask = new TcpSendTask();
+		tcpSendTask.setCtx(TcpClientHandler.ctx);
+		tcpSendTask.setSendMsg("i am qh");
+
+		new Thread(tcpSendTask).start();
 	}
 }

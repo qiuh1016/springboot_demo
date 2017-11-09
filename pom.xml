@@ -48,7 +48,7 @@
 		<dependency>
 			<groupId>org.redisson</groupId>
 			<artifactId>redisson</artifactId>
-			<version>3.5.4</version>
+			<version>3.5.5</version>
 		</dependency>
 
 		<dependency>
@@ -134,6 +134,13 @@
 		<!--</dependency>-->
 
 		<!-- old project end -->
+		
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+			<version>4.1.16.Final</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
