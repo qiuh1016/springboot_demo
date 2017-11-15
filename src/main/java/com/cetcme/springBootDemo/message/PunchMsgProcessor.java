@@ -18,15 +18,6 @@ import java.util.Date;
  */
 public class PunchMsgProcessor {
 
-
-    private static final int MESSAGE_LENGTH = 65;
-    private static final int DEVICE_NO_INDEX = 4;
-    private static final int DEVICE_NO_LENGTH = 8;
-    private static final int SAILOR_ID_NO_INDEX = 13;
-    private static final int SAILOR_ID_NO_LENGTH = 9;
-    private static final int DATE_TIME_INDEX = 23;
-    private static final int DATE_TIME_LENGTH = 6;
-
     Logger logger = LoggerFactory.getLogger(PunchMsgProcessor.class);
 
     public void process(String deviceNo) {
@@ -37,7 +28,7 @@ public class PunchMsgProcessor {
             // 设备识别码
             DeviceDao deviceDao = new DeviceDao();
             Device device = deviceDao.getByDeviceNo(deviceNo);
-            // 如 果设备编码未设置或者已删除，则直接向设备发送OK信号，丢弃数据
+            // 如果设备编码未设置或者已删除，则直接向设备发送OK信号，丢弃数据
             if (device == null) {
                 logger.warn("{} 【{}】设备打卡信息无效，该设备数据库中不存在或已删除！", DateUtil.parseDateToString(new Date()), deviceNo);
 

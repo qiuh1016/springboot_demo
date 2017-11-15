@@ -8,6 +8,9 @@ import com.cetcme.springBootDemo.task.DataInsertTask;
 import com.cetcme.springBootDemo.task.RefreshCacheTask;
 import com.cetcme.springBootDemo.task.TcpSendTask;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
+import org.redisson.api.RCountDownLatch;
+import org.redisson.api.RTopic;
+import org.redisson.api.listener.MessageListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -22,26 +25,28 @@ public class App {
 
 	public static Logger logger = LoggerFactory.getLogger(App.class);
 	public static RedissonUtil redissonUtil = new RedissonUtil();
-	private static CacheService  cacheService;
+	private static CacheService  cacheService = new CacheService();
+
+	public static String messageListenerKey = "testTopic";
+	public static String messageListenerCountDownKey = "testCountDownLatch";
 
 	public static void main(String[] args) throws Exception {
 
-		cacheService = new CacheService();
-		cacheService.loadCache();
+		SpringApplication.run(App.class, args);
 
 		otherTask();
-//		connectTcp();
-
-		SpringApplication.run(App.class, args);
+		connectTcp();
+		messageListener();
 	}
 
 	private static void otherTask() {
+
 		// 线程池
 		int cnt = Runtime.getRuntime().availableProcessors();
 		ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(cnt + 1);
 
 		// 每隔5秒钟将实时数据缓存中的实时数据插入实时数据库，并清空实时数据缓存
-//		scheduledThreadPool.scheduleAtFixedRate(new DataInsertTask(), 0, 5, TimeUnit.SECONDS);
+		scheduledThreadPool.scheduleAtFixedRate(new DataInsertTask(), 0, 5, TimeUnit.SECONDS);
 
 		// 先更新一下缓存
 		cacheService.loadCache();
@@ -57,9 +62,24 @@ public class App {
 		int port = 3345;
 		new TcpClient().connect(host, port);
 
+	}
+
+	private static void messageListener() {
+		RTopic<String> rTopic = RedissonUtil.redisson.getTopic(messageListenerKey);
+		rTopic.addListener((s, s2) -> logger.info("你发布的是： " + s + s2));
+		RCountDownLatch rCountDownLatch = RedissonUtil.redisson.getCountDownLatch(messageListenerCountDownKey);
+		rCountDownLatch.trySetCount(1);
+		try {
+			rCountDownLatch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public static void tcpSend(String msg) {
 		TcpSendTask tcpSendTask = new TcpSendTask();
 		tcpSendTask.setCtx(TcpClientHandler.ctx);
-		tcpSendTask.setSendMsg("i am qh");
+		tcpSendTask.setSendMsg(msg);
 
 		new Thread(tcpSendTask).start();
 	}

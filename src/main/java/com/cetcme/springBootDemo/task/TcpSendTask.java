@@ -31,7 +31,6 @@ public class TcpSendTask implements Runnable {
             senddata[senddata.length - 2] = 0x0d;
             senddata[senddata.length - 1] = 0x0a;
 
-
             ByteBuf responseMsgBuf = Unpooled.copiedBuffer(senddata);
             ctx.channel().writeAndFlush(responseMsgBuf);
             Thread.sleep(50);

@@ -62,13 +62,13 @@ public class DeviceStatusProcessor {
 							if (!device.getOfflineFlag()) {
 								device.setOfflineFlag(true);
 								deviceDao.setDeviceOffline(deviceNo);
-//									hasDeviceStatusChange = true;
+								hasDeviceStatusChange = true;
 								logger.info("设备({})acqData为空下线", deviceNo);
 							}
 
-//								if (hasDeviceStatusChange) {
-//									CacheUtil.put(CacheType.DEVICE_INFO_CACHE, deviceNo, device);
-//								}
+							if (hasDeviceStatusChange) {
+								RedissonUtil.redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).put(deviceNo, device);
+							}
 							continue;
 
 						} else {
@@ -77,37 +77,6 @@ public class DeviceStatusProcessor {
 								continue;
 							}
 							Long delayTime = nowDate.getTime() - acqData.getUpdateTime().getTime();
-
-							// 离线判断
-							/*if (!device.getOfflineFlag()) {
-								if (delayTime > offlineTime) {
-									device.setOfflineFlag(true);
-									deviceDao.setDeviceOffline(deviceNo);
-
-									try{
-										ChannelHandlerContext ctf = (ChannelHandlerContext) RedissonUtil.redisson.getMap(CacheType.DATAGRAM_PACKET_CACHE, deviceNo);
-										if(ctf != null){
-											String host = ((InetSocketAddress) ctf.channel().remoteAddress()).getAddress().getHostAddress();
-											if(acqData.getDataType() != null && acqData.getDataType() == 1){
-												ctf.close();
-												CacheUtil.remove(CacheType.IP_ADDRESS_CACHE, host);
-												CacheUtil.remove(CacheType.DATAGRAM_PACKET_CACHE, deviceNo);
-											}else if(acqData.getDataType() == null){
-												ctf.close();
-												CacheUtil.remove(CacheType.IP_ADDRESS_CACHE, host);
-												CacheUtil.remove(CacheType.DATAGRAM_PACKET_CACHE, deviceNo);
-											}
-//												logger.error("设备({})通道关闭成功", deviceNo);
-										}else{
-//											logger.error("设备({})通道未找到", deviceNo);
-										}
-									}catch(Exception e1){
-										logger.error("设备({})通道关闭异常:{}", deviceNo, e1.toString());
-									}
-									hasDeviceStatusChange = true;
-									logger.info("设备({})超时下线[delayTime({}) - offlineTime({})](updateTime:{})", deviceNo, delayTime, offlineTime, acqData.getUpdateTime().getTime());
-								}
-							}*/
 
 							// 超时报警判断
 							if (!device.getOuttimeFlag()) {

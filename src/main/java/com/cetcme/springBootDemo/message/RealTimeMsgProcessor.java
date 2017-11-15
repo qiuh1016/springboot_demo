@@ -26,7 +26,7 @@ public class RealTimeMsgProcessor {
     public void process(boolean single, String deviceNo) {
         if(single){
             this.processSingleFrame(deviceNo);
-        }else{
+        } else {
 //            this.processMutilframe(message,length);
         }
     }
