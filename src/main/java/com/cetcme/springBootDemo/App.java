@@ -61,7 +61,6 @@ public class App {
 		String host = "61.164.208.174";
 		int port = 3345;
 		new TcpClient().connect(host, port);
-
 	}
 
 	private static void messageListener() {
@@ -76,11 +75,4 @@ public class App {
 		}
 	}
 
-	public static void tcpSend(String msg) {
-		TcpSendTask tcpSendTask = new TcpSendTask();
-		tcpSendTask.setCtx(TcpClientHandler.ctx);
-		tcpSendTask.setSendMsg(msg);
-
-		new Thread(tcpSendTask).start();
-	}
 }

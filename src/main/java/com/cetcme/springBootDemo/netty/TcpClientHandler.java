@@ -11,8 +11,6 @@ public class TcpClientHandler extends ChannelInboundHandlerAdapter {
     private static final Logger logger = Logger.getLogger(TcpClientHandler.class.getName());
     public static ChannelHandlerContext ctx;
 
-//    Thread thread;
-
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // TODO Auto-generated method stub

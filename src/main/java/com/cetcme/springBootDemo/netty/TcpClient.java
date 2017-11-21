@@ -1,5 +1,6 @@
 package com.cetcme.springBootDemo.netty;
 
+import com.cetcme.springBootDemo.task.TcpSendTask;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -14,16 +15,16 @@ import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 
 public class TcpClient {
 
-    private String host;
-    private int port;
+//    private String host;
+//    private int port;
 
-    ChannelFuture f = null;
-    EventLoopGroup group = new NioEventLoopGroup();
+    private ChannelFuture f = null;
+    private EventLoopGroup group = new NioEventLoopGroup();
 
     public void connect(String host, int port) throws Exception {
         // Configure the client.
-        this.host = host;
-        this.port = port;
+//        this.host = host;
+//        this.port = port;
 
         try {
             Bootstrap b = new Bootstrap();
@@ -54,6 +55,14 @@ public class TcpClient {
             System.out.println("重连成功");
 
         }
+    }
+
+    public static void tcpSend(String msg) {
+        TcpSendTask tcpSendTask = new TcpSendTask();
+        tcpSendTask.setCtx(TcpClientHandler.ctx);
+        tcpSendTask.setSendMsg(msg);
+
+        new Thread(tcpSendTask).start();
     }
 
 }

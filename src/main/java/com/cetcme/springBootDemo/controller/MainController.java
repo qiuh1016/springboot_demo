@@ -2,6 +2,7 @@ package com.cetcme.springBootDemo.controller;
 
 import com.cetcme.springBootDemo.App;
 import com.cetcme.springBootDemo.domain.DeviceExtend;
+import com.cetcme.springBootDemo.netty.TcpClient;
 import com.cetcme.springBootDemo.netty.TcpClientHandler;
 import com.cetcme.springBootDemo.task.TcpSendTask;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
@@ -48,7 +49,7 @@ public class MainController {
     @RequestMapping(value = "/tcpSend", method = RequestMethod.GET)
     public String tcpSend() {
         String msg = "24 30 31 2C 31 37 30 39 37 37 37 32 2C 02 2C 12 33 44 40 13 11 56 60 17 10 18 15 57 39 00 15 11 32 F4 11 CD 00 20 40 2C 12 33 44 80 13 11 56 49 17 10 18 15 59 38 00 17 00 00 F4 11 CD 00 20 60 85";
-        App.tcpSend(msg);
+        TcpClient.tcpSend(msg);
         return "ok";
     }
 }

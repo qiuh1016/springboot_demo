@@ -17,7 +17,7 @@ public class MessageController {
 
     @RequestMapping(value = "/realTime", method = RequestMethod.POST)
     public String realTime(JSON json) {
-        new RealTimeMsgProcessor().process(true, "123123123");
+//        new RealTimeMsgProcessor().process("123123123");
         return "ok";
     }
 
