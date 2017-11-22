@@ -49,22 +49,24 @@ public class RealTimeMsgProcessor {
                     AlarmTypeBit.GPS_SIGNAL_WEAK_FLAG, AlarmTypeBit.TILT_ALARM_FLAG, AlarmTypeBit.LIB_ERROR_FLAG,
                     AlarmTypeBit.LIB_BEIDOU_FLAG));
 
-    public void process(JSONArray deviceArr) {
-        this.redisson = RedissonUtil.redisson;
-        for (Object d : deviceArr) {
-            this.processSingleFrame((JSONObject) d);
+    public void process(List<AcqData> list) {
+        redisson = RedissonUtil.redisson;
+
+        for (AcqData acqData : list) {
+            this.processSingleFrame(acqData);
         }
+
     }
 
     /**
      * 原单帧数据处理
      */
-    private void processSingleFrame(JSONObject deviceJson){
+    private void processSingleFrame(AcqData curData){
         String myDeviceNo = "";
         try{
             readMessageCount++;
 
-            myDeviceNo = (String) deviceJson.get("deviceNo"); // todo: json 获取
+            myDeviceNo = curData.getDeviceNo(); //(String) deviceJson.get("deviceNo"); // todo: json 获取
 
             DeviceExtend deviceExtend = (DeviceExtend) RedissonUtil.redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(myDeviceNo);
 
@@ -81,7 +83,7 @@ public class RealTimeMsgProcessor {
             Long shipId = deviceExtend.getShipId();
 
             // 消息1(报船舶实时消息)不存在BCD码等数据格式，因此可以直接从字符串中截取各字段。
-            AcqData curData = (AcqData) deviceJson.get("AcqData"); // todo: json 获取
+//            AcqData curData = (AcqData) deviceJson.get("AcqData"); // todo: json 获取
             this.analysisFrameMessage(myDeviceNo, deviceExtend, curData);
 
             AcqDataDao acqDataDao = new AcqDataDao();
@@ -156,6 +158,25 @@ public class RealTimeMsgProcessor {
         }
         deviceExtend.setFenceId(fenceId);
 
+        // 计算当日里程
+        double dayTotalMileage = 0.0;
+        double totalMileage = 0.0;
+        if (prevData != null) {
+            //里程数不在加入LBS数据
+            if (curData.getSignalType() == 2) {
+                dayTotalMileage = prevData.getDayTotalMileage();
+                totalMileage = prevData.getTotalMileage();
+            } else {
+                dayTotalMileage = getDayTotalMileage(prevData.getDayTotalMileage(), prevData.getAcqTime(),
+                        curData.getAcqTime(), prevData.getLongitude(), prevData.getLatitude(), curData.getLongitude(),
+                        curData.getLatitude());
+                totalMileage = getTotalMileage(prevData.getTotalMileage(), prevData.getAcqTime(), curData.getAcqTime(),
+                        prevData.getLongitude(), prevData.getLatitude(), curData.getLongitude(), curData.getLatitude());
+            }
+        }
+        curData.setDayTotalMileage(dayTotalMileage);
+        curData.setTotalMileage(totalMileage);
+
         // 如果进出港标志发生变化，则发短信提醒用户提交进出港人员信息
         if (curIofFlag != prevIofFlag) {
             String picTelNo = deviceExtend.getPicTelNo();
@@ -187,59 +208,59 @@ public class RealTimeMsgProcessor {
         String userIds = (String) redisson.getMap(RedisKey.DEVICE_RULE_USERID.toString()).get(deviceNo);
         if(userIds != null){
             String[] userIdArray = userIds.split(",");
-            for(int i=0;i<userIdArray.length;i++){
+            for (int i = 0; i < userIdArray.length; i++) {
                 int userId = NumberUtils.toInt(userIdArray[i], 0);
                 String cordonIds = (String) redisson.getMap(RedisKey.CORDON_USERID.toString()).get(userId+"");
                 if(cordonIds != null){
                     String[] cordonIdArray = cordonIds.split(",");
-                    for(int j=0;j<cordonIdArray.length;j++){
+                    for (int j = 0; j < cordonIdArray.length; j++) {
                         String[] arrayFlag = cordonIdArray[j].split("_");
-                        if(arrayFlag.length == 4){
-                            int cordonId =  NumberUtils.toInt(arrayFlag[0], 0);
-                            int cordonFlag =  NumberUtils.toInt(arrayFlag[1], -1);
-                            int cordonAll =  NumberUtils.toInt(arrayFlag[2], -1);
+                        if (arrayFlag.length == 4) {
+                            int cordonId = NumberUtils.toInt(arrayFlag[0], 0);
+                            int cordonFlag = NumberUtils.toInt(arrayFlag[1], -1);
+                            int cordonAll = NumberUtils.toInt(arrayFlag[2], -1);
                             String alarmMark = arrayFlag[3];
-                            if(cordonAll == 1){
-                                List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedisKey.CORDON_GIS_LIST.toString()).get(cordonId+"");
-                                if(gpsList != null){
+                            if (cordonAll == 1) {
+                                List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedisKey.CORDON_GIS_LIST.toString()).get(cordonId + "");
+                                if (gpsList != null) {
                                     GpsPosition point = new GpsPosition(curData.getLongitude(), curData.getLatitude());
-                                    if(GisUtil.isPointInPolygon(point, gpsList)){
-                                        if(cordonFlag == 0){//只进不出
+                                    if (GisUtil.isPointInPolygon(point, gpsList)) {
+                                        if (cordonFlag == 0) {//只进不出
                                             //这里需要做解除操作
                                             addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 0, cordonFlag, cordonId, alarmMark);
-                                        }else if(cordonFlag == 1){//只出不进
+                                        } else if (cordonFlag == 1) {//只出不进
                                             //这里需要做报警操作
                                             addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 1, cordonFlag, cordonId, alarmMark);
                                         }
-                                    }else{
-                                        if(cordonFlag == 0){//只进不出
+                                    } else {
+                                        if (cordonFlag == 0) {//只进不出
                                             //这里需要做报警操作
                                             addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 1, cordonFlag, cordonId, alarmMark);
-                                        }else if(cordonFlag == 1){//只出不进
+                                        } else if (cordonFlag == 1) {//只出不进
                                             //这里需要做解除操作
                                             addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 0, cordonFlag, cordonId, alarmMark);
                                         }
                                     }
                                 }
-                            }else if(cordonAll == 0){
-                                if(cordonId > 0){
+                            } else if (cordonAll == 0) {
+                                if (cordonId > 0) {
                                     String deviceIds = (String) redisson.getMap(RedisKey.CORDON_DEVICE_LIST.toString()).get(cordonId+"");
-                                    if((","+deviceIds+",").indexOf(","+deviceId+",") >= 0){
+                                    if (("," + deviceIds + ",").contains("," + deviceId + ",")) {
                                         GpsPosition point = new GpsPosition(curData.getLongitude(), curData.getLatitude());
                                         List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedisKey.CORDON_GIS_LIST.toString()).get(cordonId+"");
-                                        if(GisUtil.isPointInPolygon(point, gpsList)){
-                                            if(cordonFlag == 0){//只进不出
+                                        if (GisUtil.isPointInPolygon(point, gpsList)) {
+                                            if (cordonFlag == 0) {//只进不出
                                                 //这里需要做解除操作
                                                 addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 0, cordonFlag, cordonId, alarmMark);
-                                            }else if(cordonFlag == 1){//只出不进
+                                            } else if (cordonFlag == 1) {//只出不进
                                                 //这里需要做报警操作
                                                 addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 1, cordonFlag, cordonId, alarmMark);
                                             }
-                                        }else{
-                                            if(cordonFlag == 0){//只进不出
+                                        } else {
+                                            if (cordonFlag == 0) {//只进不出
                                                 //这里需要做报警操作
                                                 addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 1, cordonFlag, cordonId, alarmMark);
-                                            }else if(cordonFlag == 1){//只出不进
+                                            } else if (cordonFlag == 1) {//只出不进
                                                 //这里需要做解除操作
                                                 addInOutCordonAlarm(userId, deviceId, deviceNo, shipId, curData.getAcqTime(), curData.getLongitude(), curData.getLatitude(), 0, cordonFlag, cordonId, alarmMark);
                                             }
@@ -542,8 +563,7 @@ public class RealTimeMsgProcessor {
         }
     }
 
-    private void addCfsOutFenceAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude,
-                                     double latitude, int iofFlag) {
+    private void addCfsOutFenceAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude, double latitude, int iofFlag) {
         Alarm alarm = new Alarm();
         alarm.setDeviceId(deviceId);
         alarm.setDeviceNo(deviceNo);
@@ -631,8 +651,7 @@ public class RealTimeMsgProcessor {
 		}*/
     }
 
-    private String addPersonRatedAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude,
-                                       double latitude, int iofFlag) {
+    private String addPersonRatedAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude, double latitude, int iofFlag) {
         String alarmMes = "";
         Alarm alarm = new Alarm();
         alarm.setDeviceId(deviceId);
@@ -670,8 +689,7 @@ public class RealTimeMsgProcessor {
         return alarmMes;
     }
 
-    private void relieveAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude,
-                              double latitude, int alarmType) {
+    private void relieveAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude, double latitude, int alarmType) {
         String alarmNo = alarmDao.getAlarmNoPageList(deviceId, shipId, alarmType, 0);
         if(alarmNo != null && !"".equals(alarmNo)){
             Alarm alarm = new Alarm();
@@ -704,8 +722,7 @@ public class RealTimeMsgProcessor {
         }
     }
 
-    private String addFenceOutPunchAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude,
-                                         double latitude, int iofFlag) {
+    private String addFenceOutPunchAlarm(Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude, double latitude, int iofFlag) {
         String alarmMes = "";
         Alarm alarm = new Alarm();
         alarm.setDeviceId(deviceId);
@@ -743,8 +760,7 @@ public class RealTimeMsgProcessor {
         return alarmMes;
     }
 
-    private void addInOutCordonAlarm(int userId, Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude,
-                                     double latitude, int alarmFlag, int cordonFlag, int cordonId, String alarmMark) {
+    private void addInOutCordonAlarm(int userId, Long deviceId, String deviceNo, Long shipId, Date acqTime, double longitude, double latitude, int alarmFlag, int cordonFlag, int cordonId, String alarmMark) {
         boolean actionFlag = false;
         int alarmType = (cordonFlag == 1) ? Constants.CORDON_OUT_ALARM : Constants.CORDON_IN_ALARM;
         Alarm alarm = new Alarm();
@@ -829,8 +845,7 @@ public class RealTimeMsgProcessor {
         }
     }
 
-    private void addCommonAlarm(Long deviceId, String deviceNo, Long shipId, String shipNo, Date acqTime,
-                                String currentAlarmStatus, String prevAlarmStatus, double longitude, double latitude) {
+    private void addCommonAlarm(Long deviceId, String deviceNo, Long shipId, String shipNo, Date acqTime, String currentAlarmStatus, String prevAlarmStatus, double longitude, double latitude) {
 
         for (int j = 0; j < ERROR_LIST.size(); j++) {
             Enum<AlarmTypeBit> alarmTypeBit = ERROR_LIST.get(j);
@@ -919,6 +934,59 @@ public class RealTimeMsgProcessor {
                 }
             }
         }
+    }
+
+    /**
+     * 获取当日行程(单位:海里)
+     */
+    private double getDayTotalMileage(Double prevDayTotalMileage, Date prevAcqTime, Date curAcqTime, Double prevLon, Double prevLat, Double curLon, Double curLat) {
+
+        // 判断上一条数据与当前数据是否是同一天，如果不是，则返回0，否则继续下一步计算
+        if (prevDayTotalMileage == null || !isSameDay(prevAcqTime, curAcqTime)) {
+            return 0.0;
+        }
+
+        // 将距离与上一次的里程数相加
+        if (prevLon == null || prevLat == null || curLon == null || curLat == null
+                || (prevLon.equals(curLon) && prevLat.equals(curLat))) {
+            return prevDayTotalMileage;
+        }
+
+        // 根据经纬度，计算出当前坐标与上一条坐标的距离
+        return prevDayTotalMileage + GisUtil.getDistance(prevLon, prevLat, curLon, curLat);
+    }
+
+    /**
+     * 判断是不是同一天
+     */
+    private boolean isSameDay(Date date1, Date date2) {
+        Calendar cal1 = Calendar.getInstance();
+        cal1.setTime(date1);
+
+        Calendar cal2 = Calendar.getInstance();
+        cal2.setTime(date2);
+
+        return (cal1.get(Calendar.ERA) == cal2.get(Calendar.ERA) && cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR)
+                && cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR));
+    }
+
+    /**
+     * 获取总行程(单位:海里)
+     */
+    private double getTotalMileage(Double prevTotalMileage, Date prevAcqTime, Date curAcqTime, Double prevLon, Double prevLat, Double curLon, Double curLat) {
+
+        if (prevTotalMileage == null) {
+            return 0.0;
+        }
+
+        // 将距离与上一次的里程数相加
+        if (prevLon == null || prevLat == null || curLon == null || curLat == null
+                || (prevLon.equals(curLon) && prevLat.equals(curLat))) {
+            return prevTotalMileage;
+        }
+
+        // 根据经纬度，计算出当前坐标与上一条坐标的距离
+        return prevTotalMileage + GisUtil.getDistance(prevLon, prevLat, curLon, curLat);
     }
 
 }

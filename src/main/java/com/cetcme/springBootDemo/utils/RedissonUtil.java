@@ -3,12 +3,14 @@ package com.cetcme.springBootDemo.utils;
 import com.cetcme.springBootDemo.domain.*;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
+import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,11 +50,17 @@ public class RedissonUtil {
      * @return
      */
     public void loadPrevAcqData(List<AcqData> prevAcqData) {
-        Map<String, Object> map = redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString());
-        map.clear();
+//        Map<String, Object> map = redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString());
+//        for (AcqData d: prevAcqData) {
+//            map.put(d.getDeviceNo(), d);
+//        }
+
+        Map<String, Object> map = new HashMap<String, Object>();
         for (AcqData d: prevAcqData) {
             map.put(d.getDeviceNo(), d);
         }
+
+        redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString()).putAll(map);
     }
     public List<AcqData> getPrevAcqData() {
         return redisson.getList(RedisKey.PREV_ACQDATA_CACHE.toString());
@@ -64,11 +72,15 @@ public class RedissonUtil {
      * @return
      */
     public void loadDeviceInfo(List<DeviceExtend> deviceExtendList) {
-        Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString());
-        map.clear();
+//        Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString());
+
+        Map<String, Object> map = new HashMap<String, Object>();
         for (DeviceExtend d: deviceExtendList) {
             map.put(d.getDeviceNo(), d);
         }
+
+        redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).putAll(map);
+        // todo: 需要换成RBucket
     }
 
     public DeviceExtend getDeviceInfo(String deviceNo) {
@@ -79,7 +91,6 @@ public class RedissonUtil {
 
     public void loadSysConfig(List<SysConfig> sysConfigs) {
         Map<String, Object> map = redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString());
-        map.clear();
         for (SysConfig sysConfig : sysConfigs) {
             // 时间单位全部转为毫秒
             String key = sysConfig.getParamCode();
@@ -112,7 +123,6 @@ public class RedissonUtil {
 
     public void loadDict(List<Dict> dictList) {
         Map<String, Object> map = redisson.getMap(RedisKey.DICT_CACHE.toString());
-        map.clear();
         for (Dict dict : dictList) {
             String key = String.format("%s,%s", dict.getDictType(), dict.getDictCode());
             map.put(key, dict);
@@ -121,7 +131,6 @@ public class RedissonUtil {
 
     public void loadWaitToSendCommands(List<Command> waitToSendCommandList) {
         Map<String, Object> map = redisson.getMap(RedisKey.WAIT_TO_SEND_COMMAND_CACHE.toString());
-        map.clear();
 
         String prevKey = "";
         List<Command> commandList = null;
@@ -160,7 +169,6 @@ public class RedissonUtil {
      */
     public void loadFenceInfo(List<FenceExtend> fenceList) {
         Map<String, Object> map = redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString());
-        map.clear();
 
         List<CircleFence> circleFenceList = new ArrayList<CircleFence>();
         List<PolygonFence> polygonFenceList = new ArrayList<PolygonFence>();
@@ -219,11 +227,11 @@ public class RedissonUtil {
     }
 
     /**
-     * 从数据库中读入历史数据表索引 信息
+     * 从数据库中读入历史数据表索引信息
      */
     public void loadAcqDataHistoryTblIndex(List<AcqTblIndex> acqTblIndexList) {
-        Map<String, Object> map = redisson.getMap(RedisKey.ACQDATA_HISTORY_TBL_INDEX_CACHE.toString());
-        map.clear();
+        Map<String, Object> map = new HashMap<>();
+
         for (AcqTblIndex acqTblIndex : acqTblIndexList) {
             String key = acqTblIndex.getDeviceNo();
             String value = acqTblIndex.getTableSuff();
@@ -231,6 +239,9 @@ public class RedissonUtil {
                 map.put(key, value);
             }
         }
+
+        redisson.getMap(RedisKey.ACQDATA_HISTORY_TBL_INDEX_CACHE.toString()).putAll(map);
+
     }
 
     /**
@@ -238,7 +249,6 @@ public class RedissonUtil {
      */
     public void loadJkxxAlarmPerm(List<Integer> alarmPermList) {
         Map<String, Object> map = redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString());
-        map.clear();
         map.put(Constants.JKXX_USER_NAME, alarmPermList);
     }
 
@@ -247,7 +257,6 @@ public class RedissonUtil {
      */
     public void loadDeviceRuleUserId(Map<String, String> ruleMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.DEVICE_RULE_USERID.toString());
-        map.clear();
         for(String key : ruleMap.keySet()){
             map.put(key, ruleMap.get(key)+"");
         }
@@ -258,7 +267,6 @@ public class RedissonUtil {
      */
     public void loadCordonList(Map<String, List<GpsPosition>> cordonMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.CORDON_GIS_LIST.toString());
-        map.clear();
         for(String key : cordonMap.keySet()){
             map.put(key, cordonMap.get(key));
         }
@@ -269,7 +277,6 @@ public class RedissonUtil {
      */
     public void loadCordonUser(Map<String, String> cordonMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.CORDON_USERID.toString());
-        map.clear();
         for(String key : cordonMap.keySet()){
             map.put(key, cordonMap.get(key)+"");
         }
@@ -280,9 +287,8 @@ public class RedissonUtil {
      */
     public void loadCordonDevice(Map<String, String> cordonMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.CORDON_USERID.toString());
-        map.clear();
         for(String key : cordonMap.keySet()){
-            map.put(key, cordonMap.get(key)+"");
+            map.put(key, cordonMap.get(key) + "");
         }
     }
 
@@ -291,7 +297,6 @@ public class RedissonUtil {
      */
     public void loadAlarmInCordon(Map<String, String> cordonInMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.CORDON_STATE_IN.toString());
-        map.clear();
         for(String key : cordonInMap.keySet()){
             map.put(key, cordonInMap.get(key) + "");
         }
@@ -302,7 +307,6 @@ public class RedissonUtil {
      */
     public void loadAlarmOutCordon(Map<String, String> cordonOutMap) {
         Map<String, Object> map = redisson.getMap(RedisKey.CORDON_STATE_IN.toString());
-        map.clear();
         for(String key : cordonOutMap.keySet()){
             map.put(key, cordonOutMap.get(key) + "");
         }

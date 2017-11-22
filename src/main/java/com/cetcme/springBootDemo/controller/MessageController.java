@@ -23,13 +23,13 @@ public class MessageController {
 
     @RequestMapping(value = "/punch", method = RequestMethod.POST)
     public String punch(JSON json) {
-        new PunchMsgProcessor().process("");
+//        new PunchMsgProcessor().process("");
         return "ok";
     }
 
     @RequestMapping(value = "/device", method = RequestMethod.POST)
     public String device(JSON json) {
-        new DeviceMsgProcessor().process();
+//        new DeviceMsgProcessor().process();
         return "ok";
     }
 }
