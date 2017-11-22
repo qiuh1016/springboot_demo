@@ -1,5 +1,6 @@
 package com.cetcme.springBootDemo.message;
 
+import net.sf.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Date;
@@ -16,7 +17,7 @@ public class DeviceMsgProcessor {
 
     Logger logger = LoggerFactory.getLogger(DeviceMsgProcessor.class);
 
-    public void process() {
+    public void process(JSONObject jsonObject) {
         try{
             logger.info("PunchMsgProcessor.process开始");
             Device newDevice = new Device();
@@ -40,19 +41,19 @@ public class DeviceMsgProcessor {
             Long deviceId = device.getDeviceId();
 
             // 海拔高度
-            Double altitude = 0.0; // todo: json ConvertUtil.string2Double(datas[1])
+            Double altitude = jsonObject.getDouble("altitude"); // todo: json ConvertUtil.string2Double(datas[1])
             newDevice.setAltitude(altitude);
 
             // 水平精度
-            Double hdop = 0.0; // todo: json ConvertUtil.string2Double(datas[2]) * HDOP_RATIO;
+            Double hdop = jsonObject.getDouble("hdop"); // todo: json ConvertUtil.string2Double(datas[2]) * HDOP_RATIO;
             newDevice.setHdop(hdop);
 
             // 卫星数量
-            Integer satelliteCnt = 0; // todo: json ConvertUtil.string2Int(datas[3]);
+            Integer satelliteCnt = jsonObject.getInt("satelliteCnt"); // todo: json ConvertUtil.string2Int(datas[3]);
             newDevice.setSatelliteCnt(satelliteCnt);
 
             // 设备倾斜状态
-            String skewStr = ""; // todo: json datas[4];
+            String skewStr = jsonObject.getString("skewStr"); // todo: json datas[4];
             // X轴倾斜
             String skewXStr = skewStr.substring(0, 2);
             int skewX = ConvertUtil.hexStr2Int(skewXStr);
@@ -81,19 +82,19 @@ public class DeviceMsgProcessor {
             newDevice.setSkewZ(skewZ);
 
             // 发射频次
-            Integer transmitFreq = 0; // todo: json ConvertUtil.hexStr2Int(datas[5]);
+            Integer transmitFreq = jsonObject.getInt("transmitFreq"); // todo: json ConvertUtil.hexStr2Int(datas[5]);
             newDevice.setTransmitFreq(transmitFreq);
 
             // 发射移动距离
-            Integer transmitDist = 0; // todo: json ConvertUtil.hexStr2Int(datas[6]);
+            Integer transmitDist = jsonObject.getInt("transmitDist"); // todo: json ConvertUtil.hexStr2Int(datas[6]);
             newDevice.setTransmitDist(transmitDist);
 
             // 记录频次
-            Integer recordFreq = 0; // todo: json ConvertUtil.hexStr2Int(datas[7]);
+            Integer recordFreq = jsonObject.getInt("recordFreq"); // todo: json ConvertUtil.hexStr2Int(datas[7]);
             newDevice.setRecordFreq(recordFreq);
 
             // 记录移动距离
-            Integer recordDist = 0; // todo: json ConvertUtil.hexStr2Int(datas[8]);
+            Integer recordDist = jsonObject.getInt("recordDist"); // todo: json ConvertUtil.hexStr2Int(datas[8]);
             newDevice.setRecordDist(recordDist);
 
             newDevice.setUpdateTime(new Date());

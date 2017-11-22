@@ -7,6 +7,7 @@ import com.cetcme.springBootDemo.domain.Device;
 import com.cetcme.springBootDemo.domain.Punch;
 import com.cetcme.springBootDemo.domain.Ship;
 import com.cetcme.springBootDemo.utils.*;
+import net.sf.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,9 +21,11 @@ public class PunchMsgProcessor {
 
     Logger logger = LoggerFactory.getLogger(PunchMsgProcessor.class);
 
-    public void process(String deviceNo) {
+    public void process(JSONObject jsonObject) {
         try{
             logger.info("PunchMsgProcessor.process开始");
+
+            String deviceNo = jsonObject.getString("deviceNo"); // todo: json
             Punch punch = new Punch();
 
             // 设备识别码
@@ -48,11 +51,11 @@ public class PunchMsgProcessor {
             punch.setShipId(shipId);
 
             // 身份证信息
-            String sailorIdNo = ""; // todo: json
+            String sailorIdNo = jsonObject.getString("sailorIdNo"); // todo: json
             punch.setSailorIdNo(sailorIdNo);
 
             // 时间信息
-            String utcTime = ""; // todo: json
+            String utcTime = jsonObject.getString("utcTime"); // todo: json
             Date punchTime = ConvertUtil.utc2LocalDate(utcTime, Constants.DatePattern.UTC_NO_DOT, Constants.DatePattern.LOCAL);
 
             // 根据打卡时间判断该消息是否已经超时，如果无效，则设为当前时间
@@ -66,7 +69,7 @@ public class PunchMsgProcessor {
             punch.setPunchTime(punchTime);
 
             // 姓名信息
-            String sailorName = ""; // todo: json
+            String sailorName = jsonObject.getString("sailorName"); // todo: json
             punch.setSailorName(sailorName);
 
             PunchDao punchDao = new PunchDao();

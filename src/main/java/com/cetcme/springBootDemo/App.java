@@ -1,6 +1,7 @@
 package com.cetcme.springBootDemo;
 
 import com.cetcme.springBootDemo.message.DeviceStatusProcessor;
+import com.cetcme.springBootDemo.message.MsgProcessor;
 import com.cetcme.springBootDemo.netty.TcpClient;
 import com.cetcme.springBootDemo.netty.TcpClientHandler;
 import com.cetcme.springBootDemo.service.CacheService;
@@ -35,8 +36,8 @@ public class App {
 		SpringApplication.run(App.class, args);
 
 		otherTask();
-		connectTcp();
 		messageListener();
+		connectTcp();
 	}
 
 	private static void otherTask() {
@@ -59,20 +60,26 @@ public class App {
 
 	private static void connectTcp() throws Exception {
 		String host = "61.164.208.174";
-		int port = 3345;
+		int port = 3349;
 		new TcpClient().connect(host, port);
 	}
 
 	private static void messageListener() {
-		RTopic<String> rTopic = RedissonUtil.redisson.getTopic(messageListenerKey);
-		rTopic.addListener((s, s2) -> logger.info("你发布的是： " + s + s2));
-		RCountDownLatch rCountDownLatch = RedissonUtil.redisson.getCountDownLatch(messageListenerCountDownKey);
-		rCountDownLatch.trySetCount(1);
-		try {
-			rCountDownLatch.await();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		new Thread(() -> {
+            logger.info("订阅");
+            RTopic<String> rTopic = RedissonUtil.redisson.getTopic(messageListenerKey);
+            rTopic.addListener((s, s2) -> {
+                logger.info("你发布的是： " + s + s2);
+                new MsgProcessor(s2);
+            });
+            RCountDownLatch rCountDownLatch = RedissonUtil.redisson.getCountDownLatch(messageListenerCountDownKey);
+            rCountDownLatch.trySetCount(1);
+            try {
+                rCountDownLatch.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
 	}
 
 }

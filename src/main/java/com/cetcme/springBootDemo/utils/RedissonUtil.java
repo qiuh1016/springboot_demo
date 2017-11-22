@@ -25,9 +25,10 @@ public class RedissonUtil {
         Config config = new Config();
         config
             .useSingleServer()
-            .setAddress("redis://127.0.0.1:6379")
-            .setConnectionMinimumIdleSize(1)
-            .setConnectionPoolSize(8)
+            .setAddress("redis://61.164.208.174:3350")
+            .setPassword("foobared")
+//            .setConnectionMinimumIdleSize(1)
+//            .setConnectionPoolSize(8)
             .setDatabase(0);
 
         redisson = Redisson.create(config);
@@ -321,7 +322,9 @@ public class RedissonUtil {
         CORDON_USERID("CORDON_USERID"),
         CORDON_DEVICE_LIST("CORDON_DEVICE_LIST"),
         CORDON_STATE_IN("CORDON_STATE_IN"),
-        CORDON_STATE_OUT("CORDON_STATE_OUT");
+        CORDON_STATE_OUT("CORDON_STATE_OUT"),
+        FIRST_ACQDATA_IOF_OUT_CACHE("FIRST_ACQDATA_IOF_OUT_CACHE"),
+        FIRST_ACQDATA_IOF_IN_CACHE("FIRST_ACQDATA_IOF_IN_CACHE");
         private final String value;
 
         @Override
