@@ -1,12 +1,15 @@
 package com.cetcme.springBootDemo.task;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.TimerTask;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.cetcme.springBootDemo.utils.Constants;
+import com.cetcme.springBootDemo.utils.DateUtil;
+import com.cetcme.springBootDemo.utils.MongodbUtil;
+import com.mongodb.client.MongoCollection;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +36,8 @@ public class DataInsertTask extends TimerTask {
 			insertAcqData();
 
 			insertAlarm();
+
+            insertHistoryAcqData();
 		} catch (Exception e) {
 			logger.error("异常:" + e.toString());
 		}
@@ -73,4 +78,47 @@ public class DataInsertTask extends TimerTask {
 		}
 
 	}
+
+    private void insertHistoryAcqData() {
+        List<AcqData> srcHistoryAcqDataList = new ArrayList<AcqData>(LocalCacheUtil.getHistoryAcqDataList());
+        LocalCacheUtil.clearHistoryAcqDataList();
+        if (srcHistoryAcqDataList != null && srcHistoryAcqDataList.size() > 0) {
+            long start2 = System.currentTimeMillis();
+            MongoCollection<Document> collection = MongodbUtil.getMongoDBDaoImpl().GetCollection();
+            List<Document> documents = new ArrayList<>();
+
+            for (int i = 0; i < srcHistoryAcqDataList.size(); i++) {
+                AcqData acqData = srcHistoryAcqDataList.get(i);
+                SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                format.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
+                Document document = new Document("DEVICE_ID", acqData.getDeviceId())
+                        .append("DEVICE_NO", acqData.getDeviceNo())
+                        .append("SHIP_ID", acqData.getShipId())
+                        .append("IOF_FLAG", acqData.getIofFlag())
+                        .append("ACQ_TIME", format.format(new Timestamp(acqData.getAcqTime().getTime())))
+                        .append("DAY_TOTAL_MILEAGE", acqData.getDayTotalMileage())
+                        .append("TOTAL_MILEAGE", acqData.getTotalMileage())
+                        .append("ALARM_STATUS", acqData.getAlarmStatus())
+                        .append("LONGITUDE", acqData.getLongitude())
+                        .append("LATITUDE", acqData.getLatitude())
+                        .append("SIGNAL_TYPE", acqData.getSignalType())
+                        .append("SPEED", acqData.getSpeed())
+                        .append("TACK", acqData.getTack())
+                        .append("SIGNAL_STRENGTH", acqData.getSignalStrength())
+                        .append("CPU_TEMPRETURE", acqData.getCpuTempreture())
+                        .append("LIBV", acqData.getLibv())
+                        .append("PVBV", acqData.getPvbv())
+                        .append("CREATE_TIME", format.format(new Timestamp(acqData.getCreateTime().getTime())))
+                        .append("UPDATE_TIME", format.format(new Timestamp(acqData.getUpdateTime().getTime())))
+                        .append("DEL_FLAG", acqData.getDelFlag() != null?acqData.getDelFlag():0)
+                        .append("DATA_TYPE", (acqData.getDataType() != null && acqData.getDataType() == 2)?2:1);
+                documents.add(document);
+            }
+
+            collection.insertMany(documents);
+
+            long end2 = System.currentTimeMillis();
+            logger.info("插入历史AcqData: {}毫秒{}条", end2 - start2, srcHistoryAcqDataList.size());
+        }
+    }
 }

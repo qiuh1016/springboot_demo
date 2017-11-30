@@ -24,9 +24,15 @@ public class LocalCacheUtil {
 		return alarmList;
 	}
 
+    public static List<AcqData> getHistoryAcqDataList() {
+        return historyAcqDataList;
+    }
+
 	public static List<Command> getWaitToSendCommandList() {
 		return waitToSendCommandList;
 	}
+
+	public static List<AcqData> historyAcqDataList = new ArrayList<>();
 
 	public static void addAcqData(AcqData acqData) {
 		acqDataMap.put(acqData.getDeviceNo(), acqData);
@@ -37,6 +43,12 @@ public class LocalCacheUtil {
 			alarmList.add(alarm);
 		}
 	}
+
+    public static void addHistoryAcqData(AcqData acqData) {
+        synchronized (historyAcqDataList) {
+            historyAcqDataList.add(acqData);
+        }
+    }
 
 /*	public static void addWaitToSendCommand(Command command) {
 		synchronized (waitToSendCommandList) {
@@ -55,6 +67,12 @@ public class LocalCacheUtil {
 			alarmList.clear();
 		}
 	}
+
+    public static void clearHistoryAcqDataList() {
+        synchronized (historyAcqDataList) {
+            historyAcqDataList.clear();
+        }
+    }
 
 	public static void clearAcqDataMap() {
 		acqDataMap.clear();

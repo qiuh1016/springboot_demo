@@ -340,11 +340,12 @@ public class AcqDataDao {
 		try {
 			StringBuilder sqlSb = new StringBuilder();
 			String deviceNo = acqData.getDeviceNo();
-			Object tableSuffixObj = CacheUtil.get(CacheType.ACQDATA_HISTORY_TBL_INDEX_CACHE, deviceNo);
-			if (tableSuffixObj == null) {
-				return result;
-			}
-			String tableSuffix = CacheUtil.get(CacheType.ACQDATA_HISTORY_TBL_INDEX_CACHE, deviceNo).toString();
+//			Object tableSuffixObj = CacheUtil.get(CacheType.ACQDATA_HISTORY_TBL_INDEX_CACHE, deviceNo);
+//			if (tableSuffixObj == null) {
+//				return result;
+//			}
+//			String tableSuffix = CacheUtil.get(CacheType.ACQDATA_HISTORY_TBL_INDEX_CACHE, deviceNo).toString();
+            String tableSuffix = "0";
 			sqlSb.append(" insert into t_acq_data_" + tableSuffix
 					+ "(device_id, device_no, ship_id, acq_time, day_total_mileage, total_mileage, alarm_status, "
 					+ " longitude, latitude, signal_type, speed, tack, signal_strength, cpu_tempreture, libv, pvbv) "

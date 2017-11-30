@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by qiuhong on 02/11/2017.
@@ -27,8 +29,9 @@ public class RedissonUtil {
         Config config = new Config();
         config
             .useSingleServer()
-            .setAddress("redis://61.164.208.174:3350")
-            .setPassword("foobared")
+            .setAddress("redis://127.0.0.1:6379")
+//            .setAddress("redis://61.164.208.174:3350")
+//            .setPassword("foobared")
 //            .setConnectionMinimumIdleSize(1)
 //            .setConnectionPoolSize(8)
             .setDatabase(0);
@@ -122,16 +125,17 @@ public class RedissonUtil {
     }
 
     public void loadDict(List<Dict> dictList) {
-        Map<String, Object> map = redisson.getMap(RedisKey.DICT_CACHE.toString());
+        Map<String, Object> map = new HashMap<String, Object>();
         for (Dict dict : dictList) {
             String key = String.format("%s,%s", dict.getDictType(), dict.getDictCode());
             map.put(key, dict);
         }
+
+        redisson.getMap(RedisKey.DICT_CACHE.toString()).putAll(map);
     }
 
     public void loadWaitToSendCommands(List<Command> waitToSendCommandList) {
-        Map<String, Object> map = redisson.getMap(RedisKey.WAIT_TO_SEND_COMMAND_CACHE.toString());
-
+        Map<String, Object> map = new HashMap<String, Object>();
         String prevKey = "";
         List<Command> commandList = null;
 
@@ -162,13 +166,15 @@ public class RedissonUtil {
         if (commandList != null) {
             map.put(prevKey, commandList);
         }
+
+        redisson.getMap(RedisKey.WAIT_TO_SEND_COMMAND_CACHE.toString()).putAll(map);
     }
 
     /**
      * 从数据库中读入港口信息
      */
     public void loadFenceInfo(List<FenceExtend> fenceList) {
-        Map<String, Object> map = redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString());
+        Map<String, Object> map = new HashMap<String, Object>();
 
         List<CircleFence> circleFenceList = new ArrayList<CircleFence>();
         List<PolygonFence> polygonFenceList = new ArrayList<PolygonFence>();
@@ -224,6 +230,8 @@ public class RedissonUtil {
 
         map.put(Constants.CIRCLE_FENCE, circleFenceList);
         map.put(Constants.POLYGON_FENCE, polygonFenceList);
+
+        redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString()).putAll(map);
     }
 
     /**

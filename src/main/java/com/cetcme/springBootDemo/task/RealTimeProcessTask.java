@@ -1,37 +1,30 @@
-package com.cetcme.springBootDemo.message;
+package com.cetcme.springBootDemo.task;
 
-import com.cetcme.springBootDemo.App;
 import com.cetcme.springBootDemo.dao.*;
 import com.cetcme.springBootDemo.domain.*;
-import com.cetcme.springBootDemo.netty.TcpClient;
-import com.cetcme.springBootDemo.task.RealTimeProcessTask;
+import com.cetcme.springBootDemo.message.RealTimeMsgProcessor;
 import com.cetcme.springBootDemo.utils.*;
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.http.NameValuePair;
-import org.apache.http.message.BasicNameValuePair;
-
 import java.util.*;
 
-import com.cetcme.springBootDemo.utils.RedissonUtil.RedisKey;
-
 /**
- * Created by qiuhong on 02/11/2017.
+ * Created by qiuhong on 23/11/2017.
  */
-public class RealTimeMsgProcessor {
+public class RealTimeProcessTask implements Runnable {
 
     public static Logger logger = LoggerFactory.getLogger(RealTimeMsgProcessor.class);
 
     public static int readMessageCount = 0;
     public static int processMessageCount = 0;
 
-    private static RedissonClient redisson;
+    private static RedissonClient redisson = RedissonUtil.redisson;;
 
     private AlarmDao alarmDao = new AlarmDao();
 
@@ -44,28 +37,33 @@ public class RealTimeMsgProcessor {
         NONE1, NONE2, LIB_BEIDOU_FLAG, LIB_ERROR_FLAG, GPRS_LOCATION_FLAG, TILT_ALARM_FLAG, GPS_SIGNAL_WEAK_FLAG, GPS_ERROR_FLAG, NONE4, EMG_ALARM, GPRS_ERROR_FLAG, NFC_FLAG, LOW_BATTERY_ALARM_FLAG, PVB_ERROR_FLAG, STORAGE_ERROR_FLAG, DISMANTLE_ALARM_FLAG
     };
 
-    public static List<Enum<AlarmTypeBit>> ERROR_LIST = new ArrayList<Enum<AlarmTypeBit>>(
-            Arrays.asList(AlarmTypeBit.DISMANTLE_ALARM_FLAG, AlarmTypeBit.STORAGE_ERROR_FLAG,
-                    AlarmTypeBit.PVB_ERROR_FLAG, AlarmTypeBit.LOW_BATTERY_ALARM_FLAG, AlarmTypeBit.NFC_FLAG,
-                    AlarmTypeBit.GPRS_ERROR_FLAG, AlarmTypeBit.EMG_ALARM, AlarmTypeBit.GPS_ERROR_FLAG,
-                    AlarmTypeBit.GPS_SIGNAL_WEAK_FLAG, AlarmTypeBit.TILT_ALARM_FLAG, AlarmTypeBit.LIB_ERROR_FLAG,
-                    AlarmTypeBit.LIB_BEIDOU_FLAG));
+    public static List<Enum<RealTimeMsgProcessor.AlarmTypeBit>> ERROR_LIST = new ArrayList<Enum<RealTimeMsgProcessor.AlarmTypeBit>>(
+            Arrays.asList(RealTimeMsgProcessor.AlarmTypeBit.DISMANTLE_ALARM_FLAG, RealTimeMsgProcessor.AlarmTypeBit.STORAGE_ERROR_FLAG,
+                    RealTimeMsgProcessor.AlarmTypeBit.PVB_ERROR_FLAG, RealTimeMsgProcessor.AlarmTypeBit.LOW_BATTERY_ALARM_FLAG, RealTimeMsgProcessor.AlarmTypeBit.NFC_FLAG,
+                    RealTimeMsgProcessor.AlarmTypeBit.GPRS_ERROR_FLAG, RealTimeMsgProcessor.AlarmTypeBit.EMG_ALARM, RealTimeMsgProcessor.AlarmTypeBit.GPS_ERROR_FLAG,
+                    RealTimeMsgProcessor.AlarmTypeBit.GPS_SIGNAL_WEAK_FLAG, RealTimeMsgProcessor.AlarmTypeBit.TILT_ALARM_FLAG, RealTimeMsgProcessor.AlarmTypeBit.LIB_ERROR_FLAG,
+                    RealTimeMsgProcessor.AlarmTypeBit.LIB_BEIDOU_FLAG));
 
-    public void process(List<AcqData> list) {
-        redisson = RedissonUtil.redisson;
-        logger.info("获取长度：" + list.size());
 
-        for (AcqData acqData : list) {
-//            logger.info("acqData: " + new Date().getTime());
-//            new RealTimeProcessTask(acqData).run();
-//            this.processSingleFrame(acqData);
 
-            RealTimeProcessTask realTimeProcessTask = new RealTimeProcessTask(acqData);
-//            Thread th = new Thread(realTimeProcessTask);
-//            th.start();
-            App.threadPool.execute(realTimeProcessTask);
+
+    public RealTimeProcessTask(AcqData curData) {
+        this.curData = curData;
+    }
+
+    private AcqData curData;
+
+    @Override
+    public void run() {
+        Boolean showSpendTime = false;
+        if (showSpendTime) {
+            long start = System.currentTimeMillis();
+            this.processSingleFrame(curData);
+            long end = System.currentTimeMillis();
+            logger.info("RealTimeProcessTask 花了{}毫秒", end - start);
+        } else {
+            this.processSingleFrame(curData);
         }
-
     }
 
     /**
@@ -78,7 +76,7 @@ public class RealTimeMsgProcessor {
 
             myDeviceNo = curData.getDeviceNo(); //(String) deviceJson.get("deviceNo"); // todo: json 获取
 
-            DeviceExtend deviceExtend = (DeviceExtend) RedissonUtil.redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(myDeviceNo);
+            DeviceExtend deviceExtend = (DeviceExtend) RedissonUtil.redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).get(myDeviceNo);
 
             // 如果设备编码未设置或者已删除，则直接向设备发送OK信号，丢弃数据
             if (deviceExtend == null) {
@@ -96,8 +94,8 @@ public class RealTimeMsgProcessor {
 //            AcqData curData = (AcqData) deviceJson.get("AcqData"); // todo: json 获取
             this.analysisFrameMessage(myDeviceNo, deviceExtend, curData);
 
-            AcqDataDao acqDataDao = new AcqDataDao();
-            acqDataDao.insertHistory(curData);
+//            AcqDataDao acqDataDao = new AcqDataDao();
+//            acqDataDao.insertHistory(curData);
 
 //            responseTcpOk(message, message.getHeader());
 
@@ -136,7 +134,7 @@ public class RealTimeMsgProcessor {
             }
 
             if (hsaDeviceStatusChange) {
-                RedissonUtil.redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).put(myDeviceNo, deviceExtend);
+                RedissonUtil.redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).put(myDeviceNo, deviceExtend);
             }
 
             processMessageCount++;
@@ -153,7 +151,7 @@ public class RealTimeMsgProcessor {
         Long shipId = deviceExtend.getShipId();
         String shipNo = deviceExtend.getShipNo();
 
-        AcqData prevData = (AcqData) RedissonUtil.redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString()).get(deviceNo);
+        AcqData prevData = (AcqData) RedissonUtil.redisson.getMap(RedissonUtil.RedisKey.PREV_ACQDATA_CACHE.toString()).get(deviceNo);
         int prevIofFlag = prevData == null ? Constants.IOF_FLAG_OUT : prevData.getIofFlag();
         String iofStr = getCurIofFlag(prevIofFlag, curData, deviceExtend.getCfsStartDate(), deviceExtend.getCfsEndDate());
 
@@ -192,17 +190,17 @@ public class RealTimeMsgProcessor {
             String picTelNo = deviceExtend.getPicTelNo();
             String shipName = deviceExtend.getShipName();
             if(curIofFlag == Constants.IOF_FLAG_CFS_OUT || curIofFlag == Constants.IOF_FLAG_OUT){
-                AcqData curDataPrev = (AcqData) redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).get(deviceNo);
+                AcqData curDataPrev = (AcqData) redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).get(deviceNo);
                 if(curDataPrev != null){
-                    redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).remove(deviceNo);
+                    redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).remove(deviceNo);
                     genIofLog(curDataPrev, picTelNo, shipName, curIofFlag, iofFenceId, prevIofFlag);
                 }else{
                     genIofLog(curData, picTelNo, shipName, curIofFlag, iofFenceId, prevIofFlag);
                 }
             }else if(curIofFlag == Constants.IOF_FLAG_IN){
-                AcqData curDataPrev = (AcqData) redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).get(deviceNo);
+                AcqData curDataPrev = (AcqData) redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).get(deviceNo);
                 if(curDataPrev != null){
-                    redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).remove(deviceNo);
+                    redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).remove(deviceNo);
                     genIofLog(curDataPrev, picTelNo, shipName, curIofFlag, iofFenceId, prevIofFlag);
                 }else{
                     genIofLog(curData, picTelNo, shipName, curIofFlag, iofFenceId, prevIofFlag);
@@ -215,12 +213,12 @@ public class RealTimeMsgProcessor {
         }
 
         //围栏报警处理
-        String userIds = (String) redisson.getMap(RedisKey.DEVICE_RULE_USERID.toString()).get(deviceNo);
+        String userIds = (String) redisson.getMap(RedissonUtil.RedisKey.DEVICE_RULE_USERID.toString()).get(deviceNo);
         if(userIds != null){
             String[] userIdArray = userIds.split(",");
             for (int i = 0; i < userIdArray.length; i++) {
                 int userId = NumberUtils.toInt(userIdArray[i], 0);
-                String cordonIds = (String) redisson.getMap(RedisKey.CORDON_USERID.toString()).get(userId+"");
+                String cordonIds = (String) redisson.getMap(RedissonUtil.RedisKey.CORDON_USERID.toString()).get(userId+"");
                 if(cordonIds != null){
                     String[] cordonIdArray = cordonIds.split(",");
                     for (int j = 0; j < cordonIdArray.length; j++) {
@@ -231,7 +229,7 @@ public class RealTimeMsgProcessor {
                             int cordonAll = NumberUtils.toInt(arrayFlag[2], -1);
                             String alarmMark = arrayFlag[3];
                             if (cordonAll == 1) {
-                                List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedisKey.CORDON_GIS_LIST.toString()).get(cordonId + "");
+                                List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedissonUtil.RedisKey.CORDON_GIS_LIST.toString()).get(cordonId + "");
                                 if (gpsList != null) {
                                     GpsPosition point = new GpsPosition(curData.getLongitude(), curData.getLatitude());
                                     if (GisUtil.isPointInPolygon(point, gpsList)) {
@@ -254,10 +252,10 @@ public class RealTimeMsgProcessor {
                                 }
                             } else if (cordonAll == 0) {
                                 if (cordonId > 0) {
-                                    String deviceIds = (String) redisson.getMap(RedisKey.CORDON_DEVICE_LIST.toString()).get(cordonId+"");
+                                    String deviceIds = (String) redisson.getMap(RedissonUtil.RedisKey.CORDON_DEVICE_LIST.toString()).get(cordonId+"");
                                     if (("," + deviceIds + ",").contains("," + deviceId + ",")) {
                                         GpsPosition point = new GpsPosition(curData.getLongitude(), curData.getLatitude());
-                                        List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedisKey.CORDON_GIS_LIST.toString()).get(cordonId+"");
+                                        List<GpsPosition> gpsList = (List<GpsPosition>) redisson.getMap(RedissonUtil.RedisKey.CORDON_GIS_LIST.toString()).get(cordonId+"");
                                         if (GisUtil.isPointInPolygon(point, gpsList)) {
                                             if (cordonFlag == 0) {//只进不出
                                                 //这里需要做解除操作
@@ -289,7 +287,8 @@ public class RealTimeMsgProcessor {
         addCommonAlarm(deviceId, deviceNo, shipId, shipNo, curData.getAcqTime(), curData.getAlarmStatus(), prevAlarmStatus, curData.getLongitude(), curData.getLatitude());
 
         LocalCacheUtil.addAcqData(curData);
-        redisson.getMap(RedisKey.PREV_ACQDATA_CACHE.toString()).put(deviceNo, curData);
+        LocalCacheUtil.addHistoryAcqData(curData);
+        redisson.getMap(RedissonUtil.RedisKey.PREV_ACQDATA_CACHE.toString()).put(deviceNo, curData);
     }
 
     /**
@@ -306,9 +305,9 @@ public class RealTimeMsgProcessor {
             // 不在港内，原状态是在港的情况下，则将出入港标志设为出港，如果在伏休期，则设为伏休期出港
             if (prevIofFlag == Constants.IOF_FLAG_IN) {
                 String deviceNo = curData.getDeviceNo();
-                Object firstTimeObj = redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).get(deviceNo);
+                Object firstTimeObj = redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).get(deviceNo);
                 if (firstTimeObj == null) {
-                    redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).put(curData.getDeviceNo(), curData);
+                    redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).put(curData.getDeviceNo(), curData);
                 } else {
                     AcqData firstAcqData = (AcqData) firstTimeObj;
                     long duration = curData.getAcqTime().getTime() - firstAcqData.getAcqTime().getTime();
@@ -317,7 +316,7 @@ public class RealTimeMsgProcessor {
                         curIofFlag = isInCfs(cfsStartDate, cfsEndDate, acqTime) ? Constants.IOF_FLAG_CFS_OUT : Constants.IOF_FLAG_OUT;
                     }
                 }
-                redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).remove(deviceNo);
+                redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).remove(deviceNo);
             }
         } else {
             // 在港內，原状态是在出港的情況下，则查找该设备缓存中是否在在连续进港的首次进港时间,
@@ -325,9 +324,9 @@ public class RealTimeMsgProcessor {
             if (prevIofFlag != Constants.IOF_FLAG_IN) {
                 // 生成一条进港记录，同时生成进港人员记录
                 String deviceNo = curData.getDeviceNo();
-                Object firstTimeObj = redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).get(deviceNo);
+                Object firstTimeObj = redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).get(deviceNo);
                 if (firstTimeObj == null) {
-                    redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).put(curData.getDeviceNo(), curData);
+                    redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_IN_CACHE.toString()).put(curData.getDeviceNo(), curData);
                 } else {
                     AcqData firstAcqData = (AcqData) firstTimeObj;
                     long duration = curData.getAcqTime().getTime() - firstAcqData.getAcqTime().getTime();
@@ -336,7 +335,7 @@ public class RealTimeMsgProcessor {
                         curIofFlag = Constants.IOF_FLAG_IN;
                     }
                 }
-                redisson.getMap(RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).remove(deviceNo);
+                redisson.getMap(RedissonUtil.RedisKey.FIRST_ACQDATA_IOF_OUT_CACHE.toString()).remove(deviceNo);
             }
         }
 
@@ -352,16 +351,16 @@ public class RealTimeMsgProcessor {
 
 //		long start = System.currentTimeMillis();
 
-        List<CircleFence> circleFenceList = (List<CircleFence>) redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString()).get(Constants.CIRCLE_FENCE);
-        List<PolygonFence> polygonFenceList = (List<PolygonFence>) redisson.getMap(RedisKey.FENCE_INFO_CACHE.toString()).get(Constants.POLYGON_FENCE);
+        List<CircleFence> circleFenceList = (List<CircleFence>) redisson.getMap(RedissonUtil.RedisKey.FENCE_INFO_CACHE.toString()).get(Constants.CIRCLE_FENCE);
+        List<PolygonFence> polygonFenceList = (List<PolygonFence>) redisson.getMap(RedissonUtil.RedisKey.FENCE_INFO_CACHE.toString()).get(Constants.POLYGON_FENCE);
 
         GpsPosition curPosition = new GpsPosition(curData.getLongitude(), curData.getLatitude());
 
         // 根据系统配置中的计算区域判断是否需要进行遍历所有港口
-        double lonMax = Double.parseDouble(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LON_MAX).toString());
-        double lonMin = Double.parseDouble(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LON_MIN).toString());
-        double latMax = Double.parseDouble(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LAT_MAX).toString());
-        double latMin = Double.parseDouble(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LAT_MIN).toString());
+        double lonMax = Double.parseDouble(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LON_MAX).toString());
+        double lonMin = Double.parseDouble(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LON_MIN).toString());
+        double latMax = Double.parseDouble(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LAT_MAX).toString());
+        double latMin = Double.parseDouble(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get(Constants.LAT_MIN).toString());
 
         if (GisUtil.isPointInRect(curPosition, lonMax, lonMin, latMax, latMin)) {
             return result;
@@ -608,14 +607,14 @@ public class RealTimeMsgProcessor {
         LocalCacheUtil.addAlarm(alarm);
 
         int sendMessage = 0;
-        if(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
-            sendMessage = (int) redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
+        if(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
+            sendMessage = (int) redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
         }
         if(sendMessage == 1){
             @SuppressWarnings("unchecked")
-            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
+            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedissonUtil.RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
             if (alarmTypeList != null && !alarmTypeList.isEmpty() && alarmTypeList.contains(alarmType)) {
-                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
+                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
                 pushMsgToBpm(alarm, deviceExtend.getShipNo(), acqTime);
             }
         }
@@ -628,7 +627,7 @@ public class RealTimeMsgProcessor {
         PushLog pushLog = new PushLog();
         List<NameValuePair> params = new ArrayList<NameValuePair>();
         String key = String.format("ALARM_TYPE,%s", alarm.getAlarmType());
-        Dict dict = (Dict) redisson.getMap(RedisKey.DICT_CACHE.toString()).get(key);
+        Dict dict = (Dict) redisson.getMap(RedissonUtil.RedisKey.DICT_CACHE.toString()).get(key);
         pushLog.setBoatCode(shipNo);
         params.add(new BasicNameValuePair("boatCode", shipNo));
         pushLog.setAlarmCode(alarm.getAlarmNo());
@@ -684,14 +683,14 @@ public class RealTimeMsgProcessor {
         LocalCacheUtil.addAlarm(alarm);
 
         int sendMessage = 0;
-        if(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
-            sendMessage = (int) redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
+        if(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
+            sendMessage = (int) redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
         }
         if(sendMessage == 1){
             @SuppressWarnings("unchecked")
-            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
+            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedissonUtil.RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
             if (alarmTypeList != null && !alarmTypeList.isEmpty() && alarmTypeList.contains(alarmType)) {
-                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
+                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
                 pushMsgToBpm(alarm, deviceExtend.getShipNo(), acqTime);
             }
         }
@@ -718,14 +717,14 @@ public class RealTimeMsgProcessor {
             LocalCacheUtil.addAlarm(alarm);
 
             int sendMessage = 0;
-            if(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
-                sendMessage = (int) redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
+            if(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
+                sendMessage = (int) redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
             }
             if(sendMessage == 1){
                 @SuppressWarnings("unchecked")
-                List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
+                List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedissonUtil.RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
                 if (alarmTypeList != null && !alarmTypeList.isEmpty() && alarmTypeList.contains(alarmType)) {
-                    DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
+                    DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
                     pushMsgToBpm(alarm, deviceExtend.getShipNo(), acqTime);
                 }
             }
@@ -755,14 +754,14 @@ public class RealTimeMsgProcessor {
         LocalCacheUtil.addAlarm(alarm);
 
         int sendMessage = 0;
-        if(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
-            sendMessage = (int) redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
+        if(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
+            sendMessage = (int) redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
         }
         if(sendMessage == 1){
             @SuppressWarnings("unchecked")
-            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
+            List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedissonUtil.RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
             if (alarmTypeList != null && !alarmTypeList.isEmpty() && alarmTypeList.contains(alarmType)) {
-                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
+                DeviceExtend deviceExtend = (DeviceExtend) redisson.getMap(RedissonUtil.RedisKey.DEVICE_INFO_CACHE.toString()).get(deviceNo);
                 pushMsgToBpm(alarm, deviceExtend.getShipNo(), acqTime);
             }
         }
@@ -785,9 +784,9 @@ public class RealTimeMsgProcessor {
             alarm.setDeviceNo(deviceNo);
 
             if(cordonFlag == 0) {
-                redisson.getMap(RedisKey.CORDON_STATE_IN.toString()).remove(alarmNo);
+                redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_IN.toString()).remove(alarmNo);
             }else if(cordonFlag == 1) {
-                redisson.getMap(RedisKey.CORDON_STATE_OUT.toString()).remove(alarmNo);
+                redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_OUT.toString()).remove(alarmNo);
             }
             LocalCacheUtil.addAlarm(alarm);
 
@@ -799,14 +798,14 @@ public class RealTimeMsgProcessor {
             if(getAlarm == 0){
                 boolean addAlarm = true;
                 if(cordonFlag == 0) {
-                    if(redisson.getMap(RedisKey.CORDON_STATE_IN.toString()).get(alarmNo) == null){
-                        redisson.getMap(RedisKey.CORDON_STATE_IN.toString()).put(alarmNo, 1);
+                    if(redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_IN.toString()).get(alarmNo) == null){
+                        redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_IN.toString()).put(alarmNo, 1);
                     }else{
                         addAlarm = false;
                     }
                 }else if(cordonFlag == 1) {
-                    if(redisson.getMap(RedisKey.CORDON_STATE_OUT.toString()).get(alarmNo) == null){
-                        redisson.getMap(RedisKey.CORDON_STATE_OUT.toString()).put(alarmNo, "1");
+                    if(redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_OUT.toString()).get(alarmNo) == null){
+                        redisson.getMap(RedissonUtil.RedisKey.CORDON_STATE_OUT.toString()).put(alarmNo, "1");
                     }else{
                         addAlarm = false;
                     }
@@ -845,7 +844,7 @@ public class RealTimeMsgProcessor {
                 contentSb.append(",reportTimeDisp:'" + acqTime.toLocaleString() + "'");
 
                 String key = String.format("%s,%s", "ALARM_TYPE", alarmType);
-                Dict dict = (Dict) redisson.getMap(RedisKey.DICT_CACHE.toString()).get(key);
+                Dict dict = (Dict) redisson.getMap(RedissonUtil.RedisKey.DICT_CACHE.toString()).get(key);
                 notiType = Constants.NOTIFICATION_ALARM_VIEW;
                 contentSb.append(",alarmTypeName:'" + alarmMark + "围栏(" + dict.getDictValue() + ")'");
             }
@@ -858,7 +857,7 @@ public class RealTimeMsgProcessor {
     private void addCommonAlarm(Long deviceId, String deviceNo, Long shipId, String shipNo, Date acqTime, String currentAlarmStatus, String prevAlarmStatus, double longitude, double latitude) {
 
         for (int j = 0; j < ERROR_LIST.size(); j++) {
-            Enum<AlarmTypeBit> alarmTypeBit = ERROR_LIST.get(j);
+            Enum<RealTimeMsgProcessor.AlarmTypeBit> alarmTypeBit = ERROR_LIST.get(j);
             Alarm alarm = new Alarm();
             alarm.setDeviceId(deviceId);
             alarm.setDeviceNo(deviceNo);
@@ -897,12 +896,12 @@ public class RealTimeMsgProcessor {
                 // 如果是紧急报警，则直接向前台推送消息
                 alarm.setReportTime(acqTime);
             }
-            if(!solveFlag || alarmTypeBit != AlarmTypeBit.EMG_ALARM){
+            if(!solveFlag || alarmTypeBit != RealTimeMsgProcessor.AlarmTypeBit.EMG_ALARM){
                 String title = "滚动报警";
                 String content = "";
                 String notiType = "0";
 //				private static String EMG_ALARM_VIEW_MSG = "设备【%s】在【%s】发生【%s】！";
-                if (alarmTypeBit == AlarmTypeBit.EMG_ALARM) {
+                if (alarmTypeBit == RealTimeMsgProcessor.AlarmTypeBit.EMG_ALARM) {
                     notiType = Constants.NOTIFICATION_ALARM;
                     content = String.format(EMG_ALARM_MSG, deviceNo);
                     title = "紧急报警";
@@ -917,7 +916,7 @@ public class RealTimeMsgProcessor {
                         contentSb.append(",reportTimeDisp:'" + acqTime.toLocaleString() + "'");
 
                         String key = String.format("%s,%s", "ALARM_TYPE", alarmType);
-                        Dict dict = (Dict) redisson.getMap(RedisKey.DICT_CACHE.toString()).get(key);
+                        Dict dict = (Dict) redisson.getMap(RedissonUtil.RedisKey.DICT_CACHE.toString()).get(key);
                         notiType = Constants.NOTIFICATION_ALARM_VIEW;
                         contentSb.append(",alarmTypeName:'" + dict.getDictValue() + "'");
                     }
@@ -933,12 +932,12 @@ public class RealTimeMsgProcessor {
             LocalCacheUtil.addAlarm(alarm);
 
             int sendMessage = 0;
-            if(redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
-                sendMessage = (int) redisson.getMap(RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
+            if(redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage") != null){
+                sendMessage = (int) redisson.getMap(RedissonUtil.RedisKey.SYS_CONFIG_CACHE.toString()).get("sendMessage");
             }
             if(sendMessage == 1){
                 @SuppressWarnings("unchecked")
-                List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
+                List<Integer> alarmTypeList = (List<Integer>) redisson.getMap(RedissonUtil.RedisKey.ALARM_PERM_CACHE.toString()).get(Constants.JKXX_USER_NAME);
                 if (alarmTypeList != null && !alarmTypeList.isEmpty() && alarmTypeList.contains(alarmType)) {
                     pushMsgToBpm(alarm, shipNo, acqTime);
                 }
@@ -998,5 +997,4 @@ public class RealTimeMsgProcessor {
         // 根据经纬度，计算出当前坐标与上一条坐标的距离
         return prevTotalMileage + GisUtil.getDistance(prevLon, prevLat, curLon, curLat);
     }
-
 }

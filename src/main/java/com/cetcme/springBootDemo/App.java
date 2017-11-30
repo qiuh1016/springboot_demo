@@ -9,14 +9,18 @@ import com.cetcme.springBootDemo.task.DataInsertTask;
 import com.cetcme.springBootDemo.task.RefreshCacheTask;
 import com.cetcme.springBootDemo.task.TcpSendTask;
 import com.cetcme.springBootDemo.utils.RedissonUtil;
+import org.redisson.Redisson;
 import org.redisson.api.RCountDownLatch;
 import org.redisson.api.RTopic;
+import org.redisson.api.RedissonClient;
 import org.redisson.api.listener.MessageListener;
+import org.redisson.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,10 +30,13 @@ public class App {
 
 	public static Logger logger = LoggerFactory.getLogger(App.class);
 	public static RedissonUtil redissonUtil = new RedissonUtil();
-	private static CacheService  cacheService = new CacheService();
+	private static CacheService cacheService = new CacheService();
 
 	public static String messageListenerKey = "testTopic";
 	public static String messageListenerCountDownKey = "testCountDownLatch";
+
+    private static int cnt = Runtime.getRuntime().availableProcessors();
+    public static ExecutorService threadPool = Executors.newFixedThreadPool(cnt + 1);
 
 	public static void main(String[] args) throws Exception {
 
@@ -64,15 +71,26 @@ public class App {
 		new TcpClient().connect(host, port);
 	}
 
+	public static int total = 0;
+
 	private static void messageListener() {
 		new Thread(() -> {
+            Config config = new Config();
+            config
+                .useSingleServer()
+                .setAddress("redis://61.164.208.174:3350")
+                .setPassword("foobared")
+                .setDatabase(0);
+
+            RedissonClient topcRedisson = Redisson.create(config);
+
             logger.info("订阅");
-            RTopic<String> rTopic = RedissonUtil.redisson.getTopic(messageListenerKey);
+            RTopic<String> rTopic = topcRedisson.getTopic(messageListenerKey);
             rTopic.addListener((s, s2) -> {
-//                logger.info("你发布的是： " + s + s2);
+//                logger.info("我接收的是： ");
                 new MsgProcessor(s2);
             });
-            RCountDownLatch rCountDownLatch = RedissonUtil.redisson.getCountDownLatch(messageListenerCountDownKey);
+            RCountDownLatch rCountDownLatch = topcRedisson.getCountDownLatch(messageListenerCountDownKey);
             rCountDownLatch.trySetCount(1);
             try {
                 rCountDownLatch.await();
@@ -80,6 +98,7 @@ public class App {
                 e.printStackTrace();
             }
         }).start();
+
 	}
 
 }

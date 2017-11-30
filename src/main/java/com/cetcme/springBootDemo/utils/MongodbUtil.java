@@ -33,12 +33,15 @@ public class MongodbUtil {
             MongoClientOptions myOptions = buide.build();
             
 
-            MongoCredential credential = MongoCredential.createScramSha1Credential("admin", "db_rcld_zj", "123456".toCharArray());  
+//            MongoCredential credential = MongoCredential.createScramSha1Credential("admin", "db_rcld_zj", "123456".toCharArray());
+            MongoCredential credential = MongoCredential.createScramSha1Credential("root", "admin", "123456".toCharArray());
             List<MongoCredential> credentials = new ArrayList<MongoCredential>();  
             credentials.add(credential);  
             List<ServerAddress> seeds = new ArrayList<>();
-            seeds.add(new ServerAddress("dds-bp1bc85d401e3d841.mongodb.rds.aliyuncs.com:3717"));
-            seeds.add(new ServerAddress("dds-bp1bc85d401e3d842.mongodb.rds.aliyuncs.com:3717"));
+            seeds.add(new ServerAddress("61.164.208.174:36312"));
+//            seeds.add(new ServerAddress("dds-bp1bc85d401e3d841.mongodb.rds.aliyuncs.com:3717"));
+//            seeds.add(new ServerAddress("dds-bp1bc85d401e3d842.mongodb.rds.aliyuncs.com:3717"));
+
             try
             {
                 mongoClient = new MongoClient(seeds,credentials,myOptions);//("localhost", myOptions,credentials);
@@ -62,8 +65,10 @@ public class MongodbUtil {
 	
 	public MongoCollection<Document> GetCollection()
 	{	 
-		MongoDatabase mongoDatabase = mongoClient.getDatabase("db_rcld_zj");
-	 	MongoCollection<Document> collection = mongoDatabase.getCollection("t_acq_data_histroy");
-		return collection;
+//		MongoDatabase mongoDatabase = mongoClient.getDatabase("db_rcld_zj");
+		MongoDatabase mongoDatabase = mongoClient.getDatabase("db_test");
+//	 	MongoCollection<Document> collection = mongoDatabase.getCollection("t_acq_data_histroy");
+        MongoCollection<Document> collection = mongoDatabase.getCollection("t_acq_data_qh");
+        return collection;
 	}
 }
